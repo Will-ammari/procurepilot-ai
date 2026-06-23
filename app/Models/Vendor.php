@@ -38,4 +38,9 @@ class Vendor extends Model
     {
         return $this->hasMany(VendorContact::class);
     }
+
+    public function quotes(): HasMany
+    {
+        return $this->hasMany(Quote::class);
+    }
 }
