@@ -26,6 +26,7 @@ class QuoteResource extends JsonResource
             'purchase_request' => new PurchaseRequestResource($this->whenLoaded('purchaseRequest')),
             'vendor' => new VendorResource($this->whenLoaded('vendor')),
             'items' => QuoteItemResource::collection($this->whenLoaded('items')),
+            'analysis' => new QuoteAnalysisResource($this->whenLoaded('analysis')),
 
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),

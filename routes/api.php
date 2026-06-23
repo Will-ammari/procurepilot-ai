@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\DepartmentController;
 use App\Http\Controllers\Api\V1\PurchaseRequestController;
+use App\Http\Controllers\Api\V1\QuoteAnalysisController;
 use App\Http\Controllers\Api\V1\QuoteController;
 use App\Http\Controllers\Api\V1\VendorController;
 use Illuminate\Support\Facades\Route;
@@ -28,6 +29,16 @@ Route::prefix('v1')->group(function (): void {
             '/purchase-requests/{purchaseRequest}/quotes',
             [QuoteController::class, 'storeForPurchaseRequest']
         )->name('purchase-requests.quotes.store');
+
+        Route::post(
+            '/quotes/{quote}/analyze',
+            [QuoteAnalysisController::class, 'analyze']
+        )->name('quotes.analyze');
+
+        Route::get(
+            '/quotes/{quote}/analysis',
+            [QuoteAnalysisController::class, 'show']
+        )->name('quotes.analysis.show');
 
         Route::apiResource('departments', DepartmentController::class);
         Route::apiResource('vendors', VendorController::class);

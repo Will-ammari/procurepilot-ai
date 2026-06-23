@@ -1,0 +1,209 @@
+<?php
+
+namespace App\Services\AI;
+
+use App\Models\Quote;
+use App\Models\QuoteAnalysis;
+use Illuminate\Support\Facades\DB;
+
+class QuoteAnalysisService
+{
+    private const MODEL_NAME = 'local-deterministic-quote-analyzer-v1';
+
+    public function analyze(Quote $quote): QuoteAnalysis
+    {
+        return DB::transaction(function () use ($quote): QuoteAnalysis {
+            $quote->loadMissing(['vendor', 'purchaseRequest', 'items']);
+
+            $extractedTerms = $this->extractTerms($quote);
+            $hiddenCosts = $this->detectHiddenCosts($quote);
+            $riskNotes = $this->detectRiskNotes($quote);
+            $summary = $this->buildSummary($quote, $hiddenCosts, $riskNotes);
+            $confidenceScore = $this->calculateConfidenceScore($quote, $riskNotes);
+
+            $analysis = QuoteAnalysis::updateOrCreate(
+                ['quote_id' => $quote->id],
+                [
+                    'raw_text' => $this->buildRawTextSnapshot($quote),
+                    'summary' => $summary,
+                    'extracted_terms' => $extractedTerms,
+                    'hidden_costs' => $hiddenCosts,
+                    'risk_notes' => $riskNotes,
+                    'confidence_score' => $confidenceScore,
+                    'model_name' => self::MODEL_NAME,
+                    'status' => QuoteAnalysis::STATUS_COMPLETED,
+                ]
+            );
+
+            $quote->update([
+                'status' => Quote::STATUS_ANALYZED,
+            ]);
+
+            return $analysis->fresh();
+        });
+    }
+
+    private function extractTerms(Quote $quote): array
+    {
+        return [
+            'vendor_name' => $quote->vendor?->name,
+            'total_price' => (float) $quote->total_amount,
+            'currency' => $quote->currency,
+            'delivery_time_days' => $quote->delivery_days,
+            'payment_terms' => $quote->payment_terms,
+            'warranty_months' => $quote->warranty_months,
+            'valid_until' => $quote->valid_until?->toDateString(),
+            'included_services' => $this->detectIncludedServices($quote),
+            'excluded_services' => $this->detectExcludedServices($quote),
+        ];
+    }
+
+    private function detectIncludedServices(Quote $quote): array
+    {
+        $notes = strtolower((string) $quote->notes);
+        $included = [];
+
+        if (str_contains($notes, 'delivery included') || str_contains($notes, 'includes delivery')) {
+            $included[] = 'delivery';
+        }
+
+        if (str_contains($notes, 'installation included') || str_contains($notes, 'includes installation')) {
+            $included[] = 'installation';
+        }
+
+        return $included;
+    }
+
+    private function detectExcludedServices(Quote $quote): array
+    {
+        $notes = strtolower((string) $quote->notes);
+        $excluded = [];
+
+        if (str_contains($notes, 'delivery not included') || str_contains($notes, 'shipping not included')) {
+            $excluded[] = 'delivery';
+        }
+
+        if (str_contains($notes, 'installation not included')) {
+            $excluded[] = 'installation';
+        }
+
+        return $excluded;
+    }
+
+    private function detectHiddenCosts(Quote $quote): array
+    {
+        $notes = strtolower((string) $quote->notes);
+        $hiddenCosts = [];
+
+        if (str_contains($notes, 'shipping not included')) {
+            $hiddenCosts[] = 'shipping not included';
+        }
+
+        if (str_contains($notes, 'delivery not included')) {
+            $hiddenCosts[] = 'delivery not included';
+        }
+
+        if (str_contains($notes, 'installation not included')) {
+            $hiddenCosts[] = 'installation not included';
+        }
+
+        if (str_contains($notes, 'additional fees may apply')) {
+            $hiddenCosts[] = 'additional fees may apply';
+        }
+
+        return array_values(array_unique($hiddenCosts));
+    }
+
+    private function detectRiskNotes(Quote $quote): array
+    {
+        $riskNotes = [];
+
+        if ($quote->delivery_days === null) {
+            $riskNotes[] = 'delivery time is missing';
+        } elseif ($quote->delivery_days > 30) {
+            $riskNotes[] = 'delivery time is longer than 30 days';
+        }
+
+        if ($quote->payment_terms === null) {
+            $riskNotes[] = 'payment terms are missing';
+        }
+
+        if ($quote->warranty_months === null) {
+            $riskNotes[] = 'warranty information is missing';
+        }
+
+        if ($quote->valid_until === null) {
+            $riskNotes[] = 'quote validity date is missing';
+        }
+
+        return $riskNotes;
+    }
+
+    private function buildSummary(Quote $quote, array $hiddenCosts, array $riskNotes): string
+    {
+        $vendorName = $quote->vendor?->name ?? 'The vendor';
+        $amount = number_format((float) $quote->total_amount, 2);
+
+        $summary = "{$vendorName} offers a quote of {$amount} {$quote->currency}";
+
+        if ($quote->delivery_days !== null) {
+            $summary .= " with {$quote->delivery_days} days delivery";
+        }
+
+        if ($quote->payment_terms !== null) {
+            $summary .= " and {$quote->payment_terms} payment terms";
+        }
+
+        $summary .= '.';
+
+        if ($hiddenCosts !== []) {
+            $summary .= ' Potential hidden costs were detected.';
+        }
+
+        if ($riskNotes !== []) {
+            $summary .= ' Some commercial terms should be reviewed before approval.';
+        }
+
+        return $summary;
+    }
+
+    private function calculateConfidenceScore(Quote $quote, array $riskNotes): float
+    {
+        $score = 0.95;
+
+        if ($quote->delivery_days === null) {
+            $score -= 0.10;
+        }
+
+        if ($quote->payment_terms === null) {
+            $score -= 0.10;
+        }
+
+        if ($quote->warranty_months === null) {
+            $score -= 0.10;
+        }
+
+        if ($quote->valid_until === null) {
+            $score -= 0.10;
+        }
+
+        if (count($riskNotes) > 2) {
+            $score -= 0.05;
+        }
+
+        return round(max(0.50, $score), 2);
+    }
+
+    private function buildRawTextSnapshot(Quote $quote): string
+    {
+        return implode(PHP_EOL, array_filter([
+            'Vendor: ' . ($quote->vendor?->name ?? 'Unknown'),
+            'Total amount: ' . $quote->total_amount . ' ' . $quote->currency,
+            'Delivery days: ' . ($quote->delivery_days ?? 'N/A'),
+            'Payment terms: ' . ($quote->payment_terms ?? 'N/A'),
+            'Warranty months: ' . ($quote->warranty_months ?? 'N/A'),
+            'Valid until: ' . ($quote->valid_until?->toDateString() ?? 'N/A'),
+            'Notes: ' . ($quote->notes ?? 'N/A'),
+        ]));
+    }
+}

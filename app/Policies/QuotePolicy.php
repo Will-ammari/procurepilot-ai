@@ -68,4 +68,18 @@ class QuotePolicy
                 PurchaseRequest::STATUS_CLOSED,
             ], true);
     }
+
+    public function analyze(User $user, Quote $quote): bool
+    {
+        return $user->organization_id === $quote->organization_id
+            && ($user->isAdmin() || $user->isProcurement())
+            && ! in_array($quote->purchaseRequest->status, [
+                PurchaseRequest::STATUS_PENDING_APPROVAL,
+                PurchaseRequest::STATUS_APPROVED,
+                PurchaseRequest::STATUS_ORDERED,
+                PurchaseRequest::STATUS_INVOICED,
+                PurchaseRequest::STATUS_PAID,
+                PurchaseRequest::STATUS_CLOSED,
+            ], true);
+    }
 }
