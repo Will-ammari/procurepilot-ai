@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\ApprovalWorkflowController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\DepartmentController;
+use App\Http\Controllers\Api\V1\InvoiceController;
 use App\Http\Controllers\Api\V1\PurchaseRequestController;
 use App\Http\Controllers\Api\V1\QuoteAnalysisController;
 use App\Http\Controllers\Api\V1\QuoteComparisonController;
@@ -62,9 +63,20 @@ Route::prefix('v1')->group(function (): void {
             [ApprovalWorkflowController::class, 'reject']
         )->name('approval-steps.reject');
 
+        Route::patch(
+            '/invoices/{invoice}/mark-paid',
+            [InvoiceController::class, 'markPaid']
+        )->name('invoices.mark-paid');
+
         Route::apiResource('departments', DepartmentController::class);
         Route::apiResource('vendors', VendorController::class);
         Route::apiResource('purchase-requests', PurchaseRequestController::class);
         Route::apiResource('quotes', QuoteController::class)->only(['show', 'update', 'destroy']);
+        Route::apiResource('invoices', InvoiceController::class)->only([
+            'index',
+            'store',
+            'show',
+            'update',
+        ]);
     });
 });

@@ -102,4 +102,9 @@ class PurchaseRequest extends Model
             ->where('status', ApprovalStep::STATUS_PENDING)
             ->orderBy('sequence');
     }
+
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
+    }
 }
