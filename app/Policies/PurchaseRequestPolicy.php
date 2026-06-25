@@ -120,4 +120,17 @@ class PurchaseRequestPolicy
 
         return $user->isAdmin() || $user->isProcurement();
     }
+
+    public function sendForApproval(User $user, PurchaseRequest $purchaseRequest): bool
+    {
+        if ($user->organization_id !== $purchaseRequest->organization_id) {
+            return false;
+        }
+
+        if ($purchaseRequest->status !== PurchaseRequest::STATUS_QUOTES_RECEIVED) {
+            return false;
+        }
+
+        return $user->isAdmin() || $user->isProcurement();
+    }
 }

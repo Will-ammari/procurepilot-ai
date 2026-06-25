@@ -90,4 +90,16 @@ class PurchaseRequest extends Model
     {
         return $this->hasOne(QuoteComparison::class)->latestOfMany();
     }
+
+    public function approvalSteps(): HasMany
+    {
+        return $this->hasMany(ApprovalStep::class)->orderBy('sequence');
+    }
+
+    public function pendingApprovalStep(): HasOne
+    {
+        return $this->hasOne(ApprovalStep::class)
+            ->where('status', ApprovalStep::STATUS_PENDING)
+            ->orderBy('sequence');
+    }
 }

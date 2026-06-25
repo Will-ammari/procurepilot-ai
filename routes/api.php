@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\ApprovalWorkflowController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\DepartmentController;
 use App\Http\Controllers\Api\V1\PurchaseRequestController;
@@ -37,14 +38,29 @@ Route::prefix('v1')->group(function (): void {
         )->name('quotes.analyze');
 
         Route::get(
+            '/quotes/{quote}/analysis',
+            [QuoteAnalysisController::class, 'show']
+        )->name('quotes.analysis.show');
+
+        Route::get(
             '/purchase-requests/{purchaseRequest}/comparison',
             [QuoteComparisonController::class, 'show']
         )->name('purchase-requests.comparison.show');
 
-        Route::get(
-            '/quotes/{quote}/analysis',
-            [QuoteAnalysisController::class, 'show']
-        )->name('quotes.analysis.show');
+        Route::post(
+            '/purchase-requests/{purchaseRequest}/send-for-approval',
+            [ApprovalWorkflowController::class, 'sendForApproval']
+        )->name('purchase-requests.send-for-approval');
+
+        Route::post(
+            '/approval-steps/{approvalStep}/approve',
+            [ApprovalWorkflowController::class, 'approve']
+        )->name('approval-steps.approve');
+
+        Route::post(
+            '/approval-steps/{approvalStep}/reject',
+            [ApprovalWorkflowController::class, 'reject']
+        )->name('approval-steps.reject');
 
         Route::apiResource('departments', DepartmentController::class);
         Route::apiResource('vendors', VendorController::class);
