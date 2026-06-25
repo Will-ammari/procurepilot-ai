@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\QuoteAnalysisController;
 use App\Http\Controllers\Api\V1\QuoteComparisonController;
 use App\Http\Controllers\Api\V1\QuoteController;
 use App\Http\Controllers\Api\V1\VendorController;
+use App\Http\Controllers\Api\V1\VendorScorecardController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -67,6 +68,11 @@ Route::prefix('v1')->group(function (): void {
             '/invoices/{invoice}/mark-paid',
             [InvoiceController::class, 'markPaid']
         )->name('invoices.mark-paid');
+
+        Route::get(
+            '/vendors/{vendor}/scorecard',
+            [VendorScorecardController::class, 'show']
+        )->name('vendors.scorecard.show');
 
         Route::apiResource('departments', DepartmentController::class);
         Route::apiResource('vendors', VendorController::class);
