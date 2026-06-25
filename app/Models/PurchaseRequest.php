@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class PurchaseRequest extends Model
 {
@@ -65,6 +66,11 @@ class PurchaseRequest extends Model
         return $this->belongsTo(User::class, 'requester_id');
     }
 
+    public function approvedQuote(): BelongsTo
+    {
+        return $this->belongsTo(Quote::class, 'approved_quote_id');
+    }
+
     public function items(): HasMany
     {
         return $this->hasMany(PurchaseRequestItem::class);
@@ -73,5 +79,15 @@ class PurchaseRequest extends Model
     public function quotes(): HasMany
     {
         return $this->hasMany(Quote::class);
+    }
+
+    public function quoteComparisons(): HasMany
+    {
+        return $this->hasMany(QuoteComparison::class);
+    }
+
+    public function latestQuoteComparison(): HasOne
+    {
+        return $this->hasOne(QuoteComparison::class)->latestOfMany();
     }
 }

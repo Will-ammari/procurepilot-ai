@@ -104,4 +104,20 @@ class PurchaseRequestPolicy
                 && $purchaseRequest->requester_id === $user->id
             );
     }
+
+    public function compareQuotes(User $user, PurchaseRequest $purchaseRequest): bool
+    {
+        if ($user->organization_id !== $purchaseRequest->organization_id) {
+            return false;
+        }
+
+        if (! in_array($purchaseRequest->status, [
+            PurchaseRequest::STATUS_SOURCING,
+            PurchaseRequest::STATUS_QUOTES_RECEIVED,
+        ], true)) {
+            return false;
+        }
+
+        return $user->isAdmin() || $user->isProcurement();
+    }
 }

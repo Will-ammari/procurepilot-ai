@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\DepartmentController;
 use App\Http\Controllers\Api\V1\PurchaseRequestController;
 use App\Http\Controllers\Api\V1\QuoteAnalysisController;
+use App\Http\Controllers\Api\V1\QuoteComparisonController;
 use App\Http\Controllers\Api\V1\QuoteController;
 use App\Http\Controllers\Api\V1\VendorController;
 use Illuminate\Support\Facades\Route;
@@ -34,6 +35,11 @@ Route::prefix('v1')->group(function (): void {
             '/quotes/{quote}/analyze',
             [QuoteAnalysisController::class, 'analyze']
         )->name('quotes.analyze');
+
+        Route::get(
+            '/purchase-requests/{purchaseRequest}/comparison',
+            [QuoteComparisonController::class, 'show']
+        )->name('purchase-requests.comparison.show');
 
         Route::get(
             '/quotes/{quote}/analysis',
