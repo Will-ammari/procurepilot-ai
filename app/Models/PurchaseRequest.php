@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class PurchaseRequest extends Model
 {
@@ -107,4 +108,9 @@ class PurchaseRequest extends Model
     {
         return $this->hasMany(Invoice::class);
     }
+
+    public function attachments(): MorphMany
+{
+    return $this->morphMany(Attachment::class, 'attachable');
+}
 }

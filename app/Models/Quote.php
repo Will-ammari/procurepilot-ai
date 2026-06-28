@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Quote extends Model
 {
@@ -62,4 +63,9 @@ class Quote extends Model
     {
         return $this->hasOne(QuoteAnalysis::class);
     }
+
+    public function attachments(): MorphMany
+{
+    return $this->morphMany(Attachment::class, 'attachable');
+}
 }

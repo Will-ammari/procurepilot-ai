@@ -133,4 +133,24 @@ class PurchaseRequestPolicy
 
         return $user->isAdmin() || $user->isProcurement();
     }
+
+    public function uploadAttachment(User $user, PurchaseRequest $purchaseRequest): bool
+    {
+        if (! $this->view($user, $purchaseRequest)) {
+            return false;
+        }
+
+        if ($user->isViewer()) {
+            return false;
+        }
+
+        return $user->isAdmin()
+            || $user->isProcurement()
+            || $user->isFinance()
+            || $user->isManager()
+            || (
+                $user->isRequester()
+                && $purchaseRequest->requester_id === $user->id
+            );
+    }
 }

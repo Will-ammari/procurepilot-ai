@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Invoice extends Model
 {
@@ -70,4 +71,9 @@ class Invoice extends Model
     {
         return $this->status === self::STATUS_CANCELLED;
     }
+
+    public function attachments(): MorphMany
+{
+    return $this->morphMany(Attachment::class, 'attachable');
+}
 }

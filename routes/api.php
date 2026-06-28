@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\QuoteController;
 use App\Http\Controllers\Api\V1\VendorController;
 use App\Http\Controllers\Api\V1\VendorScorecardController;
 use App\Http\Controllers\Api\V1\ActivityLogController;
+use App\Http\Controllers\Api\V1\AttachmentController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -74,6 +75,32 @@ Route::prefix('v1')->group(function (): void {
             '/vendors/{vendor}/scorecard',
             [VendorScorecardController::class, 'show']
         )->name('vendors.scorecard.show');
+
+        Route::post(
+            '/purchase-requests/{purchaseRequest}/attachments',
+            [AttachmentController::class, 'storeForPurchaseRequest']
+        )->name('purchase-requests.attachments.store');
+
+        Route::post(
+            '/quotes/{quote}/attachments',
+            [AttachmentController::class, 'storeForQuote']
+        )->name('quotes.attachments.store');
+
+        Route::post(
+            '/invoices/{invoice}/attachments',
+            [AttachmentController::class, 'storeForInvoice']
+        )->name('invoices.attachments.store');
+
+        Route::get(
+            '/attachments/{attachment}/download',
+            [AttachmentController::class, 'download']
+        )->name('attachments.download');
+
+        Route::apiResource('attachments', AttachmentController::class)->only([
+            'index',
+            'show',
+            'destroy',
+        ]);
 
         Route::apiResource('departments', DepartmentController::class);
         Route::apiResource('vendors', VendorController::class);

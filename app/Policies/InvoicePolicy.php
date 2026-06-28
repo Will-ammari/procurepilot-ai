@@ -68,4 +68,17 @@ class InvoicePolicy
 
         return $user->isAdmin() || $user->isFinance();
     }
+
+    public function uploadAttachment(User $user, Invoice $invoice): bool
+    {
+        if ($user->organization_id !== $invoice->organization_id) {
+            return false;
+        }
+
+        if ($invoice->isCancelled()) {
+            return false;
+        }
+
+        return $user->isAdmin() || $user->isFinance();
+    }
 }
