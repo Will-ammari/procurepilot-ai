@@ -1,0 +1,1385 @@
+{
+  "info": {
+    "name": "ProcurePilot AI API",
+    "_postman_id": "f3a6e4db-9f46-4da9-8e1d-4c1d6b4a9a77",
+    "description": "Postman collection for ProcurePilot AI, a Laravel SaaS procurement API. Covers Auth, Departments, Vendors, Purchase Requests, Quotes, Quote Analysis, Quote Comparison, Approval Workflow, Invoices, Vendor Scorecards, and Activity Logs.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000/api/v1"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "department_id",
+      "value": "1"
+    },
+    {
+      "key": "vendor_id",
+      "value": "1"
+    },
+    {
+      "key": "purchase_request_id",
+      "value": "1"
+    },
+    {
+      "key": "quote_id",
+      "value": "1"
+    },
+    {
+      "key": "approval_step_id",
+      "value": "1"
+    },
+    {
+      "key": "invoice_id",
+      "value": "1"
+    },
+    {
+      "key": "activity_log_id",
+      "value": "1"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Collection-level bearer auth uses {{token}}.",
+          "// Run Auth > Login first to populate the token variable."
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login - Admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Login with demo admin credentials and store bearer token.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@procurepilot.test\",\n  \"password\": \"password\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login succeeded', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "const response = pm.response.json();",
+                  "if (response.token) {",
+                  "  pm.collectionVariables.set('token', response.token);",
+                  "} else if (response.data && response.data.token) {",
+                  "  pm.collectionVariables.set('token', response.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login - Procurement",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Login with demo procurement credentials and store bearer token.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"procurement@procurepilot.test\",\n  \"password\": \"password\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login succeeded', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "const response = pm.response.json();",
+                  "if (response.token) {",
+                  "  pm.collectionVariables.set('token', response.token);",
+                  "} else if (response.data && response.data.token) {",
+                  "  pm.collectionVariables.set('token', response.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login - Requester",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Login with demo requester credentials and store bearer token.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"requester@procurepilot.test\",\n  \"password\": \"password\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login succeeded', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "const response = pm.response.json();",
+                  "if (response.token) {",
+                  "  pm.collectionVariables.set('token', response.token);",
+                  "} else if (response.data && response.data.token) {",
+                  "  pm.collectionVariables.set('token', response.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Current User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "me"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "Departments",
+      "item": [
+        {
+          "name": "List Departments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/departments?per_page=15",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "departments?per_page=15"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Create Department",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/departments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "departments"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Operations\",\n  \"code\": \"OPS\",\n  \"description\": \"Operations and logistics\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Request succeeded', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "const response = pm.response.json();",
+                  "if (response.data && response.data.id) pm.collectionVariables.set('department_id', response.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Show Department",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/departments/{{department_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "departments",
+                "{{department_id}}"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Update Department",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/departments/{{department_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "departments",
+                "{{department_id}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Operations\",\n  \"code\": \"OPS\",\n  \"description\": \"Updated operations department\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Delete Department",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/departments/{{department_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "departments",
+                "{{department_id}}"
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "Vendors",
+      "item": [
+        {
+          "name": "List Vendors",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/vendors?status=active&per_page=15",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vendors?status=active&per_page=15"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Create Vendor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/vendors",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vendors"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Berlin Office Supplies GmbH\",\n  \"email\": \"sales@berlin-office.test\",\n  \"phone\": \"+49 30 123456\",\n  \"website\": \"https://berlin-office.example\",\n  \"address\": \"Invalidenstrasse 1, 10115 Berlin\",\n  \"country\": \"DE\",\n  \"status\": \"active\",\n  \"payment_terms\": \"NET_30\",\n  \"delivery_days\": 5,\n  \"contacts\": [\n    {\n      \"name\": \"Lena Hoffmann\",\n      \"email\": \"lena.hoffmann@berlin-office.test\",\n      \"phone\": \"+49 30 654321\",\n      \"position\": \"Account Manager\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Request succeeded', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "const response = pm.response.json();",
+                  "if (response.data && response.data.id) pm.collectionVariables.set('vendor_id', response.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Show Vendor",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/vendors/{{vendor_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vendors",
+                "{{vendor_id}}"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Update Vendor",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/vendors/{{vendor_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vendors",
+                "{{vendor_id}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Berlin Office Supplies GmbH\",\n  \"status\": \"active\",\n  \"payment_terms\": \"NET_14\",\n  \"delivery_days\": 4,\n  \"contacts\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Vendor Scorecard",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/vendors/{{vendor_id}}/scorecard",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vendors",
+                "{{vendor_id}}",
+                "scorecard"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Delete Vendor",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/vendors/{{vendor_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vendors",
+                "{{vendor_id}}"
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "Purchase Requests",
+      "item": [
+        {
+          "name": "List Purchase Requests",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/purchase-requests?per_page=15",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "purchase-requests?per_page=15"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Create Purchase Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/purchase-requests",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "purchase-requests"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"department_id\": \"{{department_id}}\",\n  \"title\": \"New CAD workstations\",\n  \"description\": \"Engineering team needs new CAD workstations.\",\n  \"needed_by_date\": \"2026-09-30\",\n  \"estimated_budget\": 6000,\n  \"currency\": \"EUR\",\n  \"priority\": \"normal\",\n  \"items\": [\n    {\n      \"name\": \"CAD workstation\",\n      \"quantity\": 2,\n      \"expected_unit_price\": 3000,\n      \"category\": \"IT equipment\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Request succeeded', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "const response = pm.response.json();",
+                  "if (response.data && response.data.id) pm.collectionVariables.set('purchase_request_id', response.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Show Purchase Request",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/purchase-requests/{{purchase_request_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "purchase-requests",
+                "{{purchase_request_id}}"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Update Purchase Request Draft",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/purchase-requests/{{purchase_request_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "purchase-requests",
+                "{{purchase_request_id}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"department_id\": \"{{department_id}}\",\n  \"title\": \"Updated CAD workstations\",\n  \"description\": \"Updated requirement for CAD workstations.\",\n  \"needed_by_date\": \"2026-10-15\",\n  \"estimated_budget\": 6500,\n  \"currency\": \"EUR\",\n  \"priority\": \"high\",\n  \"items\": [\n    {\n      \"name\": \"CAD workstation\",\n      \"quantity\": 2,\n      \"expected_unit_price\": 3250,\n      \"category\": \"IT equipment\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Submit Purchase Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/purchase-requests/{{purchase_request_id}}/submit",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "purchase-requests",
+                "{{purchase_request_id}}",
+                "submit"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Delete Purchase Request",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/purchase-requests/{{purchase_request_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "purchase-requests",
+                "{{purchase_request_id}}"
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "Quotes",
+      "item": [
+        {
+          "name": "List Quotes for Purchase Request",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/purchase-requests/{{purchase_request_id}}/quotes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "purchase-requests",
+                "{{purchase_request_id}}",
+                "quotes"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Create Quote for Purchase Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/purchase-requests/{{purchase_request_id}}/quotes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "purchase-requests",
+                "{{purchase_request_id}}",
+                "quotes"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendor_id\": \"{{vendor_id}}\",\n  \"reference_number\": \"Q-2026-001\",\n  \"total_amount\": 5900,\n  \"currency\": \"EUR\",\n  \"delivery_days\": 7,\n  \"payment_terms\": \"NET_30\",\n  \"warranty_months\": 24,\n  \"valid_until\": \"2026-09-15\",\n  \"notes\": \"Includes delivery and installation.\",\n  \"items\": [\n    {\n      \"name\": \"CAD workstation\",\n      \"quantity\": 2,\n      \"unit_price\": 2950,\n      \"total_price\": 5900\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Request succeeded', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "const response = pm.response.json();",
+                  "if (response.data && response.data.id) pm.collectionVariables.set('quote_id', response.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Show Quote",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/quotes/{{quote_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "quotes",
+                "{{quote_id}}"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Update Quote",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/quotes/{{quote_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "quotes",
+                "{{quote_id}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendor_id\": \"{{vendor_id}}\",\n  \"reference_number\": \"Q-2026-001-REV1\",\n  \"total_amount\": 5800,\n  \"currency\": \"EUR\",\n  \"delivery_days\": 6,\n  \"payment_terms\": \"NET_30\",\n  \"warranty_months\": 24,\n  \"valid_until\": \"2026-09-15\",\n  \"notes\": \"Revised quote.\",\n  \"items\": [\n    {\n      \"name\": \"CAD workstation\",\n      \"quantity\": 2,\n      \"unit_price\": 2900,\n      \"total_price\": 5800\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Analyze Quote",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/quotes/{{quote_id}}/analyze",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "quotes",
+                "{{quote_id}}",
+                "analyze"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Get Quote Analysis",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/quotes/{{quote_id}}/analysis",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "quotes",
+                "{{quote_id}}",
+                "analysis"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Delete Quote",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/quotes/{{quote_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "quotes",
+                "{{quote_id}}"
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "Quote Comparison",
+      "item": [
+        {
+          "name": "Generate Quote Comparison",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/purchase-requests/{{purchase_request_id}}/comparison",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "purchase-requests",
+                "{{purchase_request_id}}",
+                "comparison"
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "Approval Workflow",
+      "item": [
+        {
+          "name": "Send Purchase Request For Approval",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/purchase-requests/{{purchase_request_id}}/send-for-approval",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "purchase-requests",
+                "{{purchase_request_id}}",
+                "send-for-approval"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Approve Approval Step",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/approval-steps/{{approval_step_id}}/approve",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "approval-steps",
+                "{{approval_step_id}}",
+                "approve"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"comment\": \"Approved.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Reject Approval Step",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/approval-steps/{{approval_step_id}}/reject",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "approval-steps",
+                "{{approval_step_id}}",
+                "reject"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"comment\": \"Rejected because budget justification is insufficient.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Invoices",
+      "item": [
+        {
+          "name": "List Invoices",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/invoices?per_page=15",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "invoices?per_page=15"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Create Invoice",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/invoices",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "invoices"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"purchase_request_id\": \"{{purchase_request_id}}\",\n  \"vendor_id\": \"{{vendor_id}}\",\n  \"invoice_number\": \"INV-2026-001\",\n  \"invoice_date\": \"2026-08-01\",\n  \"due_date\": \"2026-08-31\",\n  \"subtotal\": 5800,\n  \"vat_rate\": 19,\n  \"currency\": \"EUR\",\n  \"notes\": \"Invoice for CAD workstations.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Request succeeded', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "const response = pm.response.json();",
+                  "if (response.data && response.data.id) pm.collectionVariables.set('invoice_id', response.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Show Invoice",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/invoices/{{invoice_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "invoices",
+                "{{invoice_id}}"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Update Invoice",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/invoices/{{invoice_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "invoices",
+                "{{invoice_id}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invoice_number\": \"INV-2026-001\",\n  \"invoice_date\": \"2026-08-01\",\n  \"due_date\": \"2026-08-31\",\n  \"subtotal\": 5800,\n  \"vat_rate\": 19,\n  \"currency\": \"EUR\",\n  \"notes\": \"Updated invoice notes.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Mark Invoice Paid",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/invoices/{{invoice_id}}/mark-paid",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "invoices",
+                "{{invoice_id}}",
+                "mark-paid"
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "Activity Logs",
+      "item": [
+        {
+          "name": "List Activity Logs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/activity-logs?per_page=15",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "activity-logs?per_page=15"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Filter Activity Logs by Event",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/activity-logs?event=purchase_request.created",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "activity-logs?event=purchase_request.created"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Show Activity Log",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/activity-logs/{{activity_log_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "activity-logs",
+                "{{activity_log_id}}"
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    }
+  ]
+}
