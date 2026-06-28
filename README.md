@@ -561,6 +561,21 @@ php artisan test
 
 ---
 
+## Docker Setup
+
+The project includes a Docker-based local development environment with:
+
+- PHP 8.3 FPM
+- Nginx
+- MySQL 8.4
+- Redis
+- Mailpit
+
+### Start the containers
+
+```bash
+docker compose up -d --build
+
 ## Demo Credentials
 
 If the demo seeder is enabled, the intended demo users are:
