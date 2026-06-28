@@ -4,6 +4,8 @@ namespace App\Services\Procurement;
 
 use App\Models\PurchaseRequest;
 use App\Models\User;
+use App\Models\ActivityLog;
+use App\Services\Support\ActivityLogService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Arr;
@@ -12,6 +14,10 @@ use Illuminate\Validation\ValidationException;
 
 class PurchaseRequestService
 {
+
+    public function __construct(
+        private readonly ActivityLogService $activityLogService
+    ) {}
     private const DEFAULT_PER_PAGE = 15;
     private const MAX_PER_PAGE = 100;
 
@@ -45,6 +51,18 @@ class PurchaseRequestService
             ]));
 
             $this->replaceItems($purchaseRequest, $items);
+            $this->activityLogService->log(
+                event: ActivityLog::EVENT_PURCHASE_REQUEST_CREATED,
+                user: $user,
+                subject: $purchaseRequest,
+                metadata: [
+                    'title' => $purchaseRequest->title,
+                    'department_id' => $purchaseRequest->department_id,
+                    'estimated_budget' => (float) $purchaseRequest->estimated_budget,
+                    'currency' => $purchaseRequest->currency,
+                    'items_count' => count($items),
+                ]
+            );
 
             return $purchaseRequest->fresh(['department', 'requester', 'items']);
         });
@@ -70,9 +88,9 @@ class PurchaseRequestService
         });
     }
 
-    public function submit(PurchaseRequest $purchaseRequest): PurchaseRequest
+    public function submit(PurchaseRequest $purchaseRequest, User $user): PurchaseRequest
     {
-        return DB::transaction(function () use ($purchaseRequest): PurchaseRequest {
+        return DB::transaction(function () use ($purchaseRequest, $user): PurchaseRequest {
             if ($purchaseRequest->status !== PurchaseRequest::STATUS_DRAFT) {
                 throw ValidationException::withMessages([
                     'status' => ['Only draft purchase requests can be submitted.'],
@@ -88,6 +106,16 @@ class PurchaseRequestService
             $purchaseRequest->update([
                 'status' => PurchaseRequest::STATUS_SUBMITTED,
             ]);
+
+            $this->activityLogService->log(
+                event: ActivityLog::EVENT_PURCHASE_REQUEST_SUBMITTED,
+                user: $user,
+                subject: $purchaseRequest,
+                metadata: [
+                    'status' => PurchaseRequest::STATUS_SUBMITTED,
+                    'submitted_at' => now()->toISOString(),
+                ]
+            );
 
             return $purchaseRequest->fresh(['department', 'requester', 'items']);
         });

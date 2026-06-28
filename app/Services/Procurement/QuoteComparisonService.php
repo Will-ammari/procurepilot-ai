@@ -6,12 +6,18 @@ use App\Models\PurchaseRequest;
 use App\Models\Quote;
 use App\Models\QuoteComparison;
 use App\Models\User;
+use App\Models\ActivityLog;
+use App\Services\Support\ActivityLogService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class QuoteComparisonService
 {
+
+    public function __construct(
+        private readonly ActivityLogService $activityLogService
+    ) {}
     private const WEIGHTS = [
         'total_amount' => 35,
         'delivery_days' => 20,
@@ -54,6 +60,18 @@ class QuoteComparisonService
                 'weights' => self::WEIGHTS,
             ]);
 
+            $this->activityLogService->log(
+                event: ActivityLog::EVENT_COMPARISON_GENERATED,
+                user: $user,
+                subject: $comparison,
+                metadata: [
+                    'purchase_request_id' => $purchaseRequest->id,
+                    'recommended_quote_id' => $comparison->recommended_quote_id,
+                    'quotes_count' => $scoredQuotes->count(),
+                    'currency' => $comparison->currency,
+                ]
+            );
+
             if ($purchaseRequest->status === PurchaseRequest::STATUS_SOURCING) {
                 $purchaseRequest->update([
                     'status' => PurchaseRequest::STATUS_QUOTES_RECEIVED,
@@ -70,9 +88,9 @@ class QuoteComparisonService
 
     private function scoreQuotes(Collection $quotes): Collection
     {
-        $amounts = $quotes->pluck('total_amount')->map(fn ($value): float => (float) $value);
-        $deliveries = $quotes->pluck('delivery_days')->filter()->map(fn ($value): int => (int) $value);
-        $warranties = $quotes->pluck('warranty_months')->filter()->map(fn ($value): int => (int) $value);
+        $amounts = $quotes->pluck('total_amount')->map(fn($value): float => (float) $value);
+        $deliveries = $quotes->pluck('delivery_days')->filter()->map(fn($value): int => (int) $value);
+        $warranties = $quotes->pluck('warranty_months')->filter()->map(fn($value): int => (int) $value);
 
         $minAmount = max(0.01, $amounts->min());
         $minDelivery = max(1, $deliveries->min() ?? 1);

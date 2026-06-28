@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\QuoteComparisonController;
 use App\Http\Controllers\Api\V1\QuoteController;
 use App\Http\Controllers\Api\V1\VendorController;
 use App\Http\Controllers\Api\V1\VendorScorecardController;
+use App\Http\Controllers\Api\V1\ActivityLogController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -83,6 +84,11 @@ Route::prefix('v1')->group(function (): void {
             'store',
             'show',
             'update',
+        ]);
+
+        Route::apiResource('activity-logs', ActivityLogController::class)->only([
+            'index',
+            'show',
         ]);
     });
 });

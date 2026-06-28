@@ -7,13 +7,19 @@ use App\Models\PurchaseRequest;
 use App\Models\Quote;
 use App\Models\Vendor;
 use App\Models\VendorScorecard;
+use App\Models\ActivityLog;
+use App\Models\User;
+use App\Services\Support\ActivityLogService;
 use Illuminate\Support\Facades\DB;
 
 class VendorScorecardService
 {
-    public function calculate(Vendor $vendor): VendorScorecard
+    public function __construct(
+        private readonly ActivityLogService $activityLogService
+    ) {}
+    public function calculate(Vendor $vendor, ?User $user = null): VendorScorecard
     {
-        return DB::transaction(function () use ($vendor): VendorScorecard {
+        return DB::transaction(function () use ($vendor, $user): VendorScorecard {
             $quoteStats = $this->calculateQuoteStats($vendor);
             $invoiceStats = $this->calculateInvoiceStats($vendor);
 
@@ -46,7 +52,20 @@ class VendorScorecardService
                     'calculated_at' => now(),
                 ]
             );
-
+            $this->activityLogService->log(
+                event: ActivityLog::EVENT_VENDOR_SCORECARD_CALCULATED,
+                user: $user,
+                subject: $vendor,
+                metadata: [
+                    'vendor_id' => $vendor->id,
+                    'scorecard_id' => $scorecard->id,
+                    'overall_score' => (float) $scorecard->overall_score,
+                    'total_quotes' => $scorecard->total_quotes,
+                    'accepted_quotes' => $scorecard->accepted_quotes,
+                    'total_invoices' => $scorecard->total_invoices,
+                    'paid_invoices' => $scorecard->paid_invoices,
+                ]
+            );
             return $scorecard->load('vendor');
         });
     }
@@ -147,13 +166,14 @@ class VendorScorecardService
             default => -5,
         };
 
-        return round(max(0, min(100,
+        return round(max(0, min(
+            100,
             $quoteParticipationScore
-            + $winRateScore
-            + $deliveryScore
-            + $invoicePaymentScore
-            + $invoiceQualityScore
-            + $statusAdjustment
+                + $winRateScore
+                + $deliveryScore
+                + $invoicePaymentScore
+                + $invoiceQualityScore
+                + $statusAdjustment
         )), 2);
     }
 

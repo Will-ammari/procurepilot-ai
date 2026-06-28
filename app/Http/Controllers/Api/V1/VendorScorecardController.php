@@ -19,7 +19,10 @@ class VendorScorecardController extends Controller
     {
         $this->authorize('view', $vendor);
 
-        $scorecard = $this->vendorScorecardService->calculate($vendor);
+        $scorecard = $this->vendorScorecardService->calculate(
+    vendor: $vendor,
+    user: request()->user()
+);
 
         return (new VendorScorecardResource($scorecard))
             ->response()

@@ -6,15 +6,20 @@ use App\Models\ApprovalStep;
 use App\Models\PurchaseRequest;
 use App\Models\QuoteComparison;
 use App\Models\User;
+use App\Models\ActivityLog;
+use App\Services\Support\ActivityLogService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class ApprovalWorkflowService
 {
+    public function __construct(
+        private readonly ActivityLogService $activityLogService
+    ) {}
     public function sendForApproval(PurchaseRequest $purchaseRequest, User $user): Collection
     {
-        return DB::transaction(function () use ($purchaseRequest): Collection {
+        return DB::transaction(function () use ($purchaseRequest, $user): Collection {
             $purchaseRequest->refresh();
 
             if ($purchaseRequest->status !== PurchaseRequest::STATUS_QUOTES_RECEIVED) {
@@ -80,6 +85,17 @@ class ApprovalWorkflowService
             ]);
 
             $this->completePurchaseRequestIfFullyApproved($approvalStep->purchaseRequest);
+            $this->activityLogService->log(
+                event: ActivityLog::EVENT_APPROVAL_APPROVED,
+                user: $user,
+                subject: $approvalStep,
+                metadata: [
+                    'purchase_request_id' => $approvalStep->purchase_request_id,
+                    'approval_role' => $approvalStep->approval_role,
+                    'sequence' => $approvalStep->sequence,
+                    'comment' => $comment,
+                ]
+            );
 
             return $approvalStep->load(['approver', 'decidedBy', 'purchaseRequest']);
         });
@@ -101,6 +117,17 @@ class ApprovalWorkflowService
             $approvalStep->purchaseRequest->update([
                 'status' => PurchaseRequest::STATUS_REJECTED,
             ]);
+            $this->activityLogService->log(
+                event: ActivityLog::EVENT_APPROVAL_REJECTED,
+                user: $user,
+                subject: $approvalStep,
+                metadata: [
+                    'purchase_request_id' => $approvalStep->purchase_request_id,
+                    'approval_role' => $approvalStep->approval_role,
+                    'sequence' => $approvalStep->sequence,
+                    'comment' => $comment,
+                ]
+            );
 
             return $approvalStep->load(['approver', 'decidedBy', 'purchaseRequest']);
         });

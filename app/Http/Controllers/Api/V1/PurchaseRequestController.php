@@ -8,6 +8,7 @@ use App\Http\Requests\Api\V1\StorePurchaseRequestRequest;
 use App\Http\Requests\Api\V1\UpdatePurchaseRequestRequest;
 use App\Http\Resources\Api\V1\PurchaseRequestResource;
 use App\Models\PurchaseRequest;
+use Illuminate\Http\Request;
 use App\Services\Procurement\PurchaseRequestService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -17,8 +18,7 @@ class PurchaseRequestController extends Controller
 {
     public function __construct(
         private readonly PurchaseRequestService $purchaseRequestService
-    ) {
-    }
+    ) {}
 
     public function index(IndexPurchaseRequestRequest $request): AnonymousResourceCollection
     {
@@ -78,11 +78,14 @@ class PurchaseRequestController extends Controller
         return response()->json(null, Response::HTTP_NO_CONTENT);
     }
 
-    public function submit(PurchaseRequest $purchaseRequest): PurchaseRequestResource
+    public function submit(Request $request, PurchaseRequest $purchaseRequest): PurchaseRequestResource
     {
         $this->authorize('submit', $purchaseRequest);
 
-        $purchaseRequest = $this->purchaseRequestService->submit($purchaseRequest);
+        $purchaseRequest = $this->purchaseRequestService->submit(
+            purchaseRequest: $purchaseRequest,
+            user: $request->user()
+        );
 
         return new PurchaseRequestResource($purchaseRequest);
     }

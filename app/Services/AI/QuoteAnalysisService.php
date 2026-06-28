@@ -4,15 +4,21 @@ namespace App\Services\AI;
 
 use App\Models\Quote;
 use App\Models\QuoteAnalysis;
+use App\Models\ActivityLog;
+use App\Models\User;
+use App\Services\Support\ActivityLogService;
 use Illuminate\Support\Facades\DB;
 
 class QuoteAnalysisService
 {
+    public function __construct(
+        private readonly ActivityLogService $activityLogService
+    ) {}
     private const MODEL_NAME = 'local-deterministic-quote-analyzer-v1';
 
-    public function analyze(Quote $quote): QuoteAnalysis
+    public function analyze(Quote $quote, ?User $user = null): QuoteAnalysis
     {
-        return DB::transaction(function () use ($quote): QuoteAnalysis {
+        return DB::transaction(function () use ($quote, $user): QuoteAnalysis {
             $quote->loadMissing(['vendor', 'purchaseRequest', 'items']);
 
             $extractedTerms = $this->extractTerms($quote);
@@ -38,6 +44,20 @@ class QuoteAnalysisService
             $quote->update([
                 'status' => Quote::STATUS_ANALYZED,
             ]);
+
+            $this->activityLogService->log(
+                event: ActivityLog::EVENT_QUOTE_ANALYSIS_COMPLETED,
+                user: $user,
+                subject: $quote,
+                metadata: [
+                    'quote_id' => $quote->id,
+                    'purchase_request_id' => $quote->purchase_request_id,
+                    'analysis_id' => $analysis->id,
+                    'confidence_score' => (float) $analysis->confidence_score,
+                    'model_name' => $analysis->model_name,
+                ],
+                organizationId: $quote->organization_id
+            );
 
             return $analysis->fresh();
         });

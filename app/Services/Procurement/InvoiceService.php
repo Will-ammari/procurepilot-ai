@@ -6,12 +6,17 @@ use App\Models\Invoice;
 use App\Models\PurchaseRequest;
 use App\Models\User;
 use App\Models\Vendor;
+use App\Models\ActivityLog;
+use App\Services\Support\ActivityLogService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class InvoiceService
 {
+    public function __construct(
+        private readonly ActivityLogService $activityLogService
+    ) {}
     public function listForUser(User $user, array $filters = []): LengthAwarePaginator
     {
         $query = Invoice::query()
@@ -91,6 +96,20 @@ class InvoiceService
                     'status' => PurchaseRequest::STATUS_INVOICED,
                 ]);
             }
+            $this->activityLogService->log(
+                event: ActivityLog::EVENT_INVOICE_RECEIVED,
+                user: $user,
+                subject: $invoice,
+                metadata: [
+                    'purchase_request_id' => $purchaseRequest->id,
+                    'vendor_id' => $vendor->id,
+                    'invoice_number' => $invoice->invoice_number,
+                    'subtotal' => (float) $invoice->subtotal,
+                    'vat_rate' => (float) $invoice->vat_rate,
+                    'total' => (float) $invoice->total,
+                    'currency' => $invoice->currency,
+                ]
+            );
 
             return $invoice->load(['vendor', 'purchaseRequest']);
         });
@@ -136,7 +155,7 @@ class InvoiceService
 
     public function markPaid(Invoice $invoice, User $user): Invoice
     {
-        return DB::transaction(function () use ($invoice): Invoice {
+        return DB::transaction(function () use ($invoice, $user): Invoice {
             $invoice->refresh();
 
             if ($invoice->isPaid()) {
@@ -159,6 +178,20 @@ class InvoiceService
             $invoice->purchaseRequest->update([
                 'status' => PurchaseRequest::STATUS_PAID,
             ]);
+
+            $this->activityLogService->log(
+                event: ActivityLog::EVENT_INVOICE_PAID,
+                user: $user,
+                subject: $invoice,
+                metadata: [
+                    'purchase_request_id' => $invoice->purchase_request_id,
+                    'vendor_id' => $invoice->vendor_id,
+                    'invoice_number' => $invoice->invoice_number,
+                    'paid_at' => $invoice->paid_at?->toISOString(),
+                    'total' => (float) $invoice->total,
+                    'currency' => $invoice->currency,
+                ]
+            );
 
             return $invoice->load(['vendor', 'purchaseRequest']);
         });

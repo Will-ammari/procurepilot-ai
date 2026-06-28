@@ -11,14 +11,16 @@ class QuoteAnalysisController extends Controller
 {
     public function __construct(
         private readonly QuoteAnalysisService $quoteAnalysisService
-    ) {
-    }
+    ) {}
 
     public function analyze(Quote $quote): QuoteAnalysisResource
     {
         $this->authorize('analyze', $quote);
 
-        $analysis = $this->quoteAnalysisService->analyze($quote);
+        $analysis = $this->quoteAnalysisService->analyze(
+            quote: $quote,
+            user: request()->user()
+        );
 
         return new QuoteAnalysisResource($analysis);
     }

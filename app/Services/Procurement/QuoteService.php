@@ -9,11 +9,17 @@ use App\Models\Vendor;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Arr;
+use App\Models\ActivityLog;
+use App\Services\Support\ActivityLogService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class QuoteService
 {
+
+    public function __construct(
+        private readonly ActivityLogService $activityLogService
+    ) {}
     private const DEFAULT_PER_PAGE = 15;
     private const MAX_PER_PAGE = 100;
 
@@ -68,6 +74,19 @@ class QuoteService
             ]));
 
             $this->replaceItems($quote, $items);
+
+            $this->activityLogService->log(
+                event: ActivityLog::EVENT_QUOTE_CREATED,
+                user: $user,
+                subject: $quote,
+                metadata: [
+                    'purchase_request_id' => $purchaseRequest->id,
+                    'vendor_id' => $vendor->id,
+                    'total_amount' => (float) $quote->total_amount,
+                    'currency' => $quote->currency,
+                    'items_count' => count($items),
+                ]
+            );
 
             if (in_array($purchaseRequest->status, [
                 PurchaseRequest::STATUS_SUBMITTED,
