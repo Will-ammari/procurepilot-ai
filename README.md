@@ -6,7 +6,7 @@
 
 The project models a complete procurement workflow: employees create purchase requests, procurement teams collect supplier quotes, the system analyzes and compares offers, approval steps are generated based on budget thresholds, finance tracks invoices and VAT, and vendor performance is calculated through scorecards.
 
-> Current test status: **77 tests passed / 269 assertions**
+> Current test status: **86 tests passed / 303 assertions**
 
 ---
 
@@ -183,6 +183,15 @@ Approval thresholds:
 * Paid invoices cannot be edited.
 * Marking an invoice as paid updates the related purchase request.
 
+### Attachments and File Uploads
+
+* Upload files to purchase requests, quotes, and invoices.
+* Store attachment metadata with organization scoping.
+* Validate file type and maximum size.
+* Support metadata listing, file download, and deletion.
+* Enforce role-based authorization through policies.
+* Remove stored files when attachments are deleted.
+
 ### Vendor Scorecards
 
 * Calculates vendor performance metrics.
@@ -214,7 +223,7 @@ app/
 └── Services/
     ├── AI/                   # Quote analysis and AI client integration
     ├── Procurement/          # Procurement business workflows
-    └── Support/              # Shared supporting services
+    └── Support/              # Shared supporting services, including attachments
 ```
 
 FastAPI microservice structure:
@@ -404,6 +413,7 @@ Main tables currently covered by the backend:
 * `invoices`
 * `vendor_scorecards`
 * `activity_logs`
+* `attachments`
 * `personal_access_tokens`
 
 ---
@@ -572,7 +582,7 @@ Security design:
 Current Laravel test result:
 
 ```text
-Tests: 77 passed (269 assertions)
+Tests: 86 passed (303 assertions)
 ```
 
 Current FastAPI test result:
@@ -596,7 +606,8 @@ Covered Laravel areas:
 * activity logs,
 * authorization rules,
 * cross-organization isolation,
-* validation errors.
+* validation errors,
+* attachment upload, listing, metadata viewing, deletion, authorization, and file validation.
 
 Run Laravel tests locally:
 
@@ -803,6 +814,7 @@ Completed:
 * Invoices and VAT calculation
 * Vendor scorecard API
 * Activity logs API
+* Attachments and file uploads
 * Docker development setup
 * GitHub Actions CI
 * OpenAPI documentation
@@ -811,7 +823,6 @@ Completed:
 
 Remaining / planned:
 
-* Attachments and file uploads
 * Optional queue-based `QuoteAnalysisJob`
 * OpenAI-compatible provider implementation
 * Screenshots and demo script
@@ -823,11 +834,9 @@ Remaining / planned:
 
 ### Product Polish Milestone
 
-* Add quote and invoice attachments.
-* Add file upload validation.
-* Link uploaded files to purchase requests, quotes, and invoices.
 * Add screenshots for the full procurement flow.
 * Add a demo walkthrough script.
+* Add final GitHub repository polish.
 
 ### AI Enhancement Milestone
 
@@ -857,6 +866,7 @@ It demonstrates:
 * API-first development,
 * procurement workflow modeling,
 * deterministic AI-assisted decision support,
+* attachment upload workflows,
 * FastAPI microservice integration,
 * Dockerized development,
 * automated CI,
@@ -869,4 +879,8 @@ The project is intentionally focused on backend depth rather than frontend UI. I
 
 ## License
 
-This project is currently intended as a portfolio and educational project. Add a license file before using it for commercial distribution.
+This project is publicly available for portfolio review purposes only.
+
+No open-source license is granted. You may view the source code for evaluation and learning purposes, but you may not copy, redistribute, sublicense, sell, or use this project or substantial portions of it in another product without explicit written permission from the author.
+
+Copyright © 2026 William Ammari. All rights reserved.

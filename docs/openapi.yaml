@@ -2,56 +2,66 @@ openapi: 3.0.3
 info:
   title: ProcurePilot AI API
   version: 1.0.0
-  description: |
-    ProcurePilot AI is a Laravel API-first SaaS backend for procurement workflows in German and European SMBs.
+  description: 'ProcurePilot AI is a Laravel API-first SaaS backend for procurement workflows in German and European SMBs.
+
 
     The API covers authentication, organization-scoped departments, vendors, purchase requests, quotes,
+
     deterministic quote analysis, quote comparison, approval workflows, invoices with VAT, vendor scorecards,
-    and activity logs.
+
+    file attachments, and activity logs.
+
 
     Current verified backend status:
-    - 77 feature/unit tests passing
-    - 269 assertions
+
+    - 86 feature/unit tests passing
+
+    - 303 assertions
+
     - Sanctum Bearer token authentication
+
     - Multi-tenant organization isolation
+
     - MVC + Services + Form Requests + Resources + Policies
+
+    '
   contact:
     name: ProcurePilot AI
 servers:
-  - url: http://localhost:8000/api/v1
-    description: Local Laravel development server
-
+- url: http://localhost:8000/api/v1
+  description: Local Laravel development server
 tags:
-  - name: Auth
-    description: Authentication and current user endpoints
-  - name: Departments
-    description: Organization-scoped department management
-  - name: Vendors
-    description: Vendor and vendor contact management
-  - name: Purchase Requests
-    description: Purchase request lifecycle and items
-  - name: Quotes
-    description: Supplier quotes and quote items
-  - name: AI Quote Analysis
-    description: Deterministic MVP quote analysis endpoints
-  - name: Quote Comparison
-    description: Rule-based quote comparison and recommendation
-  - name: Approval Workflow
-    description: Multi-step approval routing by budget threshold
-  - name: Invoices
-    description: Invoice tracking and VAT calculation
-  - name: Vendor Scorecards
-    description: Vendor performance metrics
-  - name: Activity Logs
-    description: Organization-scoped audit trail
-
+- name: Auth
+  description: Authentication and current user endpoints
+- name: Departments
+  description: Organization-scoped department management
+- name: Vendors
+  description: Vendor and vendor contact management
+- name: Purchase Requests
+  description: Purchase request lifecycle and items
+- name: Quotes
+  description: Supplier quotes and quote items
+- name: AI Quote Analysis
+  description: Deterministic MVP quote analysis endpoints
+- name: Quote Comparison
+  description: Rule-based quote comparison and recommendation
+- name: Approval Workflow
+  description: Multi-step approval routing by budget threshold
+- name: Invoices
+  description: Invoice tracking and VAT calculation
+- name: Vendor Scorecards
+  description: Vendor performance metrics
+- name: Attachments
+  description: File upload, metadata, download, and deletion for purchase requests, quotes, and invoices
+- name: Activity Logs
+  description: Organization-scoped audit trail
 security:
-  - bearerAuth: []
-
+- bearerAuth: []
 paths:
   /auth/login:
     post:
-      tags: [Auth]
+      tags:
+      - Auth
       summary: Login and issue Sanctum token
       security: []
       requestBody:
@@ -79,10 +89,10 @@ paths:
           $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthenticated'
-
   /me:
     get:
-      tags: [Auth]
+      tags:
+      - Auth
       summary: Get authenticated user
       responses:
         '200':
@@ -96,24 +106,24 @@ paths:
                     $ref: '#/components/schemas/User'
         '401':
           $ref: '#/components/responses/Unauthenticated'
-
   /auth/logout:
     post:
-      tags: [Auth]
+      tags:
+      - Auth
       summary: Revoke current access token
       responses:
         '204':
           description: Logged out
         '401':
           $ref: '#/components/responses/Unauthenticated'
-
   /departments:
     get:
-      tags: [Departments]
+      tags:
+      - Departments
       summary: List organization departments
       parameters:
-        - $ref: '#/components/parameters/SearchQuery'
-        - $ref: '#/components/parameters/PerPageQuery'
+      - $ref: '#/components/parameters/SearchQuery'
+      - $ref: '#/components/parameters/PerPageQuery'
       responses:
         '200':
           description: Department collection
@@ -122,7 +132,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/DepartmentCollection'
     post:
-      tags: [Departments]
+      tags:
+      - Departments
       summary: Create department
       requestBody:
         required: true
@@ -141,13 +152,13 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '422':
           $ref: '#/components/responses/ValidationError'
-
   /departments/{department}:
     get:
-      tags: [Departments]
+      tags:
+      - Departments
       summary: Show department
       parameters:
-        - $ref: '#/components/parameters/DepartmentId'
+      - $ref: '#/components/parameters/DepartmentId'
       responses:
         '200':
           description: Department details
@@ -160,10 +171,11 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
     patch:
-      tags: [Departments]
+      tags:
+      - Departments
       summary: Update department
       parameters:
-        - $ref: '#/components/parameters/DepartmentId'
+      - $ref: '#/components/parameters/DepartmentId'
       requestBody:
         required: true
         content:
@@ -182,31 +194,35 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
     delete:
-      tags: [Departments]
+      tags:
+      - Departments
       summary: Delete department
       parameters:
-        - $ref: '#/components/parameters/DepartmentId'
+      - $ref: '#/components/parameters/DepartmentId'
       responses:
         '204':
           description: Department deleted
         '403':
           $ref: '#/components/responses/Forbidden'
-
   /vendors:
     get:
-      tags: [Vendors]
+      tags:
+      - Vendors
       summary: List vendors
       parameters:
-        - name: status
-          in: query
-          schema:
-            type: string
-            enum: [active, inactive, blocked]
-        - name: search
-          in: query
-          schema:
-            type: string
-        - $ref: '#/components/parameters/PerPageQuery'
+      - name: status
+        in: query
+        schema:
+          type: string
+          enum:
+          - active
+          - inactive
+          - blocked
+      - name: search
+        in: query
+        schema:
+          type: string
+      - $ref: '#/components/parameters/PerPageQuery'
       responses:
         '200':
           description: Vendor collection
@@ -215,7 +231,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/VendorCollection'
     post:
-      tags: [Vendors]
+      tags:
+      - Vendors
       summary: Create vendor with contacts
       requestBody:
         required: true
@@ -234,13 +251,13 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '422':
           $ref: '#/components/responses/ValidationError'
-
   /vendors/{vendor}:
     get:
-      tags: [Vendors]
+      tags:
+      - Vendors
       summary: Show vendor
       parameters:
-        - $ref: '#/components/parameters/VendorId'
+      - $ref: '#/components/parameters/VendorId'
       responses:
         '200':
           description: Vendor details
@@ -251,10 +268,11 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
     patch:
-      tags: [Vendors]
+      tags:
+      - Vendors
       summary: Update vendor and replace contacts
       parameters:
-        - $ref: '#/components/parameters/VendorId'
+      - $ref: '#/components/parameters/VendorId'
       requestBody:
         required: true
         content:
@@ -273,22 +291,23 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
     delete:
-      tags: [Vendors]
+      tags:
+      - Vendors
       summary: Delete vendor
       parameters:
-        - $ref: '#/components/parameters/VendorId'
+      - $ref: '#/components/parameters/VendorId'
       responses:
         '204':
           description: Vendor deleted
         '403':
           $ref: '#/components/responses/Forbidden'
-
   /vendors/{vendor}/scorecard:
     get:
-      tags: [Vendor Scorecards]
+      tags:
+      - Vendor Scorecards
       summary: Calculate and return vendor scorecard
       parameters:
-        - $ref: '#/components/parameters/VendorId'
+      - $ref: '#/components/parameters/VendorId'
       responses:
         '200':
           description: Vendor scorecard
@@ -298,22 +317,31 @@ paths:
                 $ref: '#/components/schemas/VendorScorecardResponse'
         '403':
           $ref: '#/components/responses/Forbidden'
-
   /purchase-requests:
     get:
-      tags: [Purchase Requests]
+      tags:
+      - Purchase Requests
       summary: List purchase requests visible to current user
       parameters:
-        - name: status
-          in: query
-          schema:
-            type: string
-            enum: [draft, submitted, received_quotes, pending_approval, approved, rejected, ordered, invoiced, paid]
-        - name: department_id
-          in: query
-          schema:
-            type: integer
-        - $ref: '#/components/parameters/PerPageQuery'
+      - name: status
+        in: query
+        schema:
+          type: string
+          enum:
+          - draft
+          - submitted
+          - received_quotes
+          - pending_approval
+          - approved
+          - rejected
+          - ordered
+          - invoiced
+          - paid
+      - name: department_id
+        in: query
+        schema:
+          type: integer
+      - $ref: '#/components/parameters/PerPageQuery'
       responses:
         '200':
           description: Purchase request collection
@@ -322,7 +350,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/PurchaseRequestCollection'
     post:
-      tags: [Purchase Requests]
+      tags:
+      - Purchase Requests
       summary: Create purchase request with at least one item
       requestBody:
         required: true
@@ -339,13 +368,13 @@ paths:
                 $ref: '#/components/schemas/PurchaseRequestResponse'
         '422':
           $ref: '#/components/responses/ValidationError'
-
   /purchase-requests/{purchaseRequest}:
     get:
-      tags: [Purchase Requests]
+      tags:
+      - Purchase Requests
       summary: Show purchase request
       parameters:
-        - $ref: '#/components/parameters/PurchaseRequestId'
+      - $ref: '#/components/parameters/PurchaseRequestId'
       responses:
         '200':
           description: Purchase request details
@@ -356,10 +385,11 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
     patch:
-      tags: [Purchase Requests]
+      tags:
+      - Purchase Requests
       summary: Update draft purchase request and replace items
       parameters:
-        - $ref: '#/components/parameters/PurchaseRequestId'
+      - $ref: '#/components/parameters/PurchaseRequestId'
       requestBody:
         required: true
         content:
@@ -378,22 +408,23 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
     delete:
-      tags: [Purchase Requests]
+      tags:
+      - Purchase Requests
       summary: Delete purchase request
       parameters:
-        - $ref: '#/components/parameters/PurchaseRequestId'
+      - $ref: '#/components/parameters/PurchaseRequestId'
       responses:
         '204':
           description: Purchase request deleted
         '403':
           $ref: '#/components/responses/Forbidden'
-
   /purchase-requests/{purchaseRequest}/submit:
     post:
-      tags: [Purchase Requests]
+      tags:
+      - Purchase Requests
       summary: Submit draft purchase request
       parameters:
-        - $ref: '#/components/parameters/PurchaseRequestId'
+      - $ref: '#/components/parameters/PurchaseRequestId'
       responses:
         '200':
           description: Purchase request submitted
@@ -405,13 +436,13 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '422':
           $ref: '#/components/responses/ValidationError'
-
   /purchase-requests/{purchaseRequest}/quotes:
     get:
-      tags: [Quotes]
+      tags:
+      - Quotes
       summary: List quotes for purchase request
       parameters:
-        - $ref: '#/components/parameters/PurchaseRequestId'
+      - $ref: '#/components/parameters/PurchaseRequestId'
       responses:
         '200':
           description: Quote collection
@@ -420,10 +451,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/QuoteCollection'
     post:
-      tags: [Quotes]
+      tags:
+      - Quotes
       summary: Create quote for submitted purchase request
       parameters:
-        - $ref: '#/components/parameters/PurchaseRequestId'
+      - $ref: '#/components/parameters/PurchaseRequestId'
       requestBody:
         required: true
         content:
@@ -441,13 +473,13 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '422':
           $ref: '#/components/responses/ValidationError'
-
   /quotes/{quote}:
     get:
-      tags: [Quotes]
+      tags:
+      - Quotes
       summary: Show quote
       parameters:
-        - $ref: '#/components/parameters/QuoteId'
+      - $ref: '#/components/parameters/QuoteId'
       responses:
         '200':
           description: Quote details
@@ -458,10 +490,11 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
     patch:
-      tags: [Quotes]
+      tags:
+      - Quotes
       summary: Update quote and replace items
       parameters:
-        - $ref: '#/components/parameters/QuoteId'
+      - $ref: '#/components/parameters/QuoteId'
       requestBody:
         required: true
         content:
@@ -480,22 +513,23 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
     delete:
-      tags: [Quotes]
+      tags:
+      - Quotes
       summary: Delete quote
       parameters:
-        - $ref: '#/components/parameters/QuoteId'
+      - $ref: '#/components/parameters/QuoteId'
       responses:
         '204':
           description: Quote deleted
         '403':
           $ref: '#/components/responses/Forbidden'
-
   /quotes/{quote}/analyze:
     post:
-      tags: [AI Quote Analysis]
+      tags:
+      - AI Quote Analysis
       summary: Generate or regenerate deterministic quote analysis
       parameters:
-        - $ref: '#/components/parameters/QuoteId'
+      - $ref: '#/components/parameters/QuoteId'
       responses:
         '200':
           description: Quote analysis generated
@@ -505,13 +539,13 @@ paths:
                 $ref: '#/components/schemas/QuoteAnalysisResponse'
         '403':
           $ref: '#/components/responses/Forbidden'
-
   /quotes/{quote}/analysis:
     get:
-      tags: [AI Quote Analysis]
+      tags:
+      - AI Quote Analysis
       summary: Show generated quote analysis
       parameters:
-        - $ref: '#/components/parameters/QuoteId'
+      - $ref: '#/components/parameters/QuoteId'
       responses:
         '200':
           description: Quote analysis
@@ -523,13 +557,13 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-
   /purchase-requests/{purchaseRequest}/comparison:
     get:
-      tags: [Quote Comparison]
+      tags:
+      - Quote Comparison
       summary: Generate quote comparison and recommended quote
       parameters:
-        - $ref: '#/components/parameters/PurchaseRequestId'
+      - $ref: '#/components/parameters/PurchaseRequestId'
       responses:
         '200':
           description: Quote comparison generated
@@ -541,13 +575,13 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '422':
           $ref: '#/components/responses/ValidationError'
-
   /purchase-requests/{purchaseRequest}/send-for-approval:
     post:
-      tags: [Approval Workflow]
+      tags:
+      - Approval Workflow
       summary: Send purchase request for approval
       parameters:
-        - $ref: '#/components/parameters/PurchaseRequestId'
+      - $ref: '#/components/parameters/PurchaseRequestId'
       responses:
         '201':
           description: Approval steps created
@@ -564,13 +598,13 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '422':
           $ref: '#/components/responses/ValidationError'
-
   /approval-steps/{approvalStep}/approve:
     post:
-      tags: [Approval Workflow]
+      tags:
+      - Approval Workflow
       summary: Approve an approval step
       parameters:
-        - $ref: '#/components/parameters/ApprovalStepId'
+      - $ref: '#/components/parameters/ApprovalStepId'
       requestBody:
         required: false
         content:
@@ -592,20 +626,21 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '422':
           $ref: '#/components/responses/ValidationError'
-
   /approval-steps/{approvalStep}/reject:
     post:
-      tags: [Approval Workflow]
+      tags:
+      - Approval Workflow
       summary: Reject an approval step
       parameters:
-        - $ref: '#/components/parameters/ApprovalStepId'
+      - $ref: '#/components/parameters/ApprovalStepId'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [comment]
+              required:
+              - comment
               properties:
                 comment:
                   type: string
@@ -620,18 +655,20 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '422':
           $ref: '#/components/responses/ValidationError'
-
   /invoices:
     get:
-      tags: [Invoices]
+      tags:
+      - Invoices
       summary: List organization invoices
       parameters:
-        - name: status
-          in: query
-          schema:
-            type: string
-            enum: [unpaid, paid]
-        - $ref: '#/components/parameters/PerPageQuery'
+      - name: status
+        in: query
+        schema:
+          type: string
+          enum:
+          - unpaid
+          - paid
+      - $ref: '#/components/parameters/PerPageQuery'
       responses:
         '200':
           description: Invoice collection
@@ -640,7 +677,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/InvoiceCollection'
     post:
-      tags: [Invoices]
+      tags:
+      - Invoices
       summary: Create invoice and calculate VAT totals
       requestBody:
         required: true
@@ -659,13 +697,13 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '422':
           $ref: '#/components/responses/ValidationError'
-
   /invoices/{invoice}:
     get:
-      tags: [Invoices]
+      tags:
+      - Invoices
       summary: Show invoice
       parameters:
-        - $ref: '#/components/parameters/InvoiceId'
+      - $ref: '#/components/parameters/InvoiceId'
       responses:
         '200':
           description: Invoice details
@@ -676,10 +714,11 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
     patch:
-      tags: [Invoices]
+      tags:
+      - Invoices
       summary: Update unpaid invoice and recalculate totals
       parameters:
-        - $ref: '#/components/parameters/InvoiceId'
+      - $ref: '#/components/parameters/InvoiceId'
       requestBody:
         required: true
         content:
@@ -697,13 +736,13 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '422':
           $ref: '#/components/responses/ValidationError'
-
   /invoices/{invoice}/mark-paid:
     patch:
-      tags: [Invoices]
+      tags:
+      - Invoices
       summary: Mark invoice as paid and purchase request as paid
       parameters:
-        - $ref: '#/components/parameters/InvoiceId'
+      - $ref: '#/components/parameters/InvoiceId'
       responses:
         '200':
           description: Invoice paid
@@ -713,41 +752,41 @@ paths:
                 $ref: '#/components/schemas/InvoiceResponse'
         '403':
           $ref: '#/components/responses/Forbidden'
-
   /activity-logs:
     get:
-      tags: [Activity Logs]
+      tags:
+      - Activity Logs
       summary: List organization activity logs
       parameters:
-        - name: event
-          in: query
-          schema:
-            type: string
-            example: purchase_request.created
-        - name: user_id
-          in: query
-          schema:
-            type: integer
-        - name: subject_type
-          in: query
-          schema:
-            type: string
-            example: App\Models\PurchaseRequest
-        - name: subject_id
-          in: query
-          schema:
-            type: integer
-        - name: from
-          in: query
-          schema:
-            type: string
-            format: date
-        - name: to
-          in: query
-          schema:
-            type: string
-            format: date
-        - $ref: '#/components/parameters/PerPageQuery'
+      - name: event
+        in: query
+        schema:
+          type: string
+          example: purchase_request.created
+      - name: user_id
+        in: query
+        schema:
+          type: integer
+      - name: subject_type
+        in: query
+        schema:
+          type: string
+          example: App\Models\PurchaseRequest
+      - name: subject_id
+        in: query
+        schema:
+          type: integer
+      - name: from
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        schema:
+          type: string
+          format: date
+      - $ref: '#/components/parameters/PerPageQuery'
       responses:
         '200':
           description: Activity log collection
@@ -757,13 +796,13 @@ paths:
                 $ref: '#/components/schemas/ActivityLogCollection'
         '403':
           $ref: '#/components/responses/Forbidden'
-
   /activity-logs/{activityLog}:
     get:
-      tags: [Activity Logs]
+      tags:
+      - Activity Logs
       summary: Show activity log entry
       parameters:
-        - $ref: '#/components/parameters/ActivityLogId'
+      - $ref: '#/components/parameters/ActivityLogId'
       responses:
         '200':
           description: Activity log details
@@ -775,14 +814,141 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-
+  /purchase-requests/{purchaseRequest}/attachments:
+    post:
+      tags:
+      - Attachments
+      summary: Upload attachment for purchase request
+      description: Upload a validated file and attach it to a purchase request within the authenticated user's organization.
+      parameters:
+      - $ref: '#/components/parameters/PurchaseRequestId'
+      requestBody: &id001
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AttachmentUploadRequest'
+      responses: &id002
+        '201':
+          description: Attachment uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttachmentResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /quotes/{quote}/attachments:
+    post:
+      tags:
+      - Attachments
+      summary: Upload attachment for quote
+      description: Upload a supplier quote document or related file and attach it to a quote.
+      parameters:
+      - $ref: '#/components/parameters/QuoteId'
+      requestBody: *id001
+      responses: *id002
+  /invoices/{invoice}/attachments:
+    post:
+      tags:
+      - Attachments
+      summary: Upload attachment for invoice
+      description: Upload an invoice PDF or supporting finance document and attach it to an invoice.
+      parameters:
+      - $ref: '#/components/parameters/InvoiceId'
+      requestBody: *id001
+      responses: *id002
+  /attachments:
+    get:
+      tags:
+      - Attachments
+      summary: List organization attachments
+      parameters:
+      - name: subject_type
+        in: query
+        schema:
+          type: string
+          enum:
+          - purchase_request
+          - quote
+          - invoice
+      - name: subject_id
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+      - name: mime_type
+        in: query
+        schema:
+          type: string
+          example: application/pdf
+      - $ref: '#/components/parameters/PerPageQuery'
+      responses:
+        '200':
+          description: Attachment collection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttachmentCollection'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /attachments/{attachment}:
+    get:
+      tags:
+      - Attachments
+      summary: Show attachment metadata
+      parameters:
+      - $ref: '#/components/parameters/AttachmentId'
+      responses:
+        '200':
+          description: Attachment metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttachmentResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+      - Attachments
+      summary: Delete attachment and stored file
+      parameters:
+      - $ref: '#/components/parameters/AttachmentId'
+      responses:
+        '204':
+          description: Attachment deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /attachments/{attachment}/download:
+    get:
+      tags:
+      - Attachments
+      summary: Download attachment file
+      parameters:
+      - $ref: '#/components/parameters/AttachmentId'
+      responses:
+        '200':
+          description: Binary attachment file
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: Sanctum
-
   parameters:
     SearchQuery:
       name: search
@@ -839,7 +1005,12 @@ components:
       required: true
       schema:
         type: integer
-
+    AttachmentId:
+      name: attachment
+      in: path
+      required: true
+      schema:
+        type: integer
   responses:
     Unauthenticated:
       description: Missing or invalid authentication token
@@ -871,11 +1042,12 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ValidationErrorResponse'
-
   schemas:
     LoginRequest:
       type: object
-      required: [email, password]
+      required:
+      - email
+      - password
       properties:
         email:
           type: string
@@ -883,7 +1055,6 @@ components:
         password:
           type: string
           format: password
-
     User:
       type: object
       properties:
@@ -901,8 +1072,13 @@ components:
           format: email
         role:
           type: string
-          enum: [admin, requester, procurement, manager, finance, viewer]
-
+          enum:
+          - admin
+          - requester
+          - procurement
+          - manager
+          - finance
+          - viewer
     Department:
       type: object
       properties:
@@ -924,10 +1100,10 @@ components:
         updated_at:
           type: string
           format: date-time
-
     DepartmentWriteRequest:
       type: object
-      required: [name]
+      required:
+      - name
       properties:
         name:
           type: string
@@ -939,23 +1115,20 @@ components:
         description:
           type: string
           nullable: true
-
     DepartmentResponse:
       type: object
       properties:
         data:
           $ref: '#/components/schemas/Department'
-
     DepartmentCollection:
       allOf:
-        - $ref: '#/components/schemas/PaginatedCollection'
-        - type: object
-          properties:
-            data:
-              type: array
-              items:
-                $ref: '#/components/schemas/Department'
-
+      - $ref: '#/components/schemas/PaginatedCollection'
+      - type: object
+        properties:
+          data:
+            type: array
+            items:
+              $ref: '#/components/schemas/Department'
     Vendor:
       type: object
       properties:
@@ -970,7 +1143,10 @@ components:
           nullable: true
         status:
           type: string
-          enum: [active, inactive, blocked]
+          enum:
+          - active
+          - inactive
+          - blocked
         email:
           type: string
           nullable: true
@@ -999,7 +1175,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/VendorContact'
-
     VendorContact:
       type: object
       properties:
@@ -1018,10 +1193,11 @@ components:
         position:
           type: string
           nullable: true
-
     VendorWriteRequest:
       type: object
-      required: [name, status]
+      required:
+      - name
+      - status
       properties:
         name:
           type: string
@@ -1031,7 +1207,10 @@ components:
           nullable: true
         status:
           type: string
-          enum: [active, inactive, blocked]
+          enum:
+          - active
+          - inactive
+          - blocked
         email:
           type: string
           nullable: true
@@ -1060,7 +1239,8 @@ components:
           type: array
           items:
             type: object
-            required: [name]
+            required:
+            - name
             properties:
               name:
                 type: string
@@ -1073,23 +1253,20 @@ components:
               position:
                 type: string
                 nullable: true
-
     VendorResponse:
       type: object
       properties:
         data:
           $ref: '#/components/schemas/Vendor'
-
     VendorCollection:
       allOf:
-        - $ref: '#/components/schemas/PaginatedCollection'
-        - type: object
-          properties:
-            data:
-              type: array
-              items:
-                $ref: '#/components/schemas/Vendor'
-
+      - $ref: '#/components/schemas/PaginatedCollection'
+      - type: object
+        properties:
+          data:
+            type: array
+            items:
+              $ref: '#/components/schemas/Vendor'
     PurchaseRequest:
       type: object
       properties:
@@ -1118,10 +1295,23 @@ components:
           example: EUR
         priority:
           type: string
-          enum: [low, normal, high, urgent]
+          enum:
+          - low
+          - normal
+          - high
+          - urgent
         status:
           type: string
-          enum: [draft, submitted, received_quotes, pending_approval, approved, rejected, ordered, invoiced, paid]
+          enum:
+          - draft
+          - submitted
+          - received_quotes
+          - pending_approval
+          - approved
+          - rejected
+          - ordered
+          - invoiced
+          - paid
         approved_quote_id:
           type: integer
           nullable: true
@@ -1129,7 +1319,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PurchaseRequestItem'
-
     PurchaseRequestItem:
       type: object
       properties:
@@ -1152,10 +1341,15 @@ components:
         category:
           type: string
           nullable: true
-
     PurchaseRequestWriteRequest:
       type: object
-      required: [department_id, title, estimated_budget, currency, priority, items]
+      required:
+      - department_id
+      - title
+      - estimated_budget
+      - currency
+      - priority
+      - items
       properties:
         department_id:
           type: integer
@@ -1178,13 +1372,19 @@ components:
           example: EUR
         priority:
           type: string
-          enum: [low, normal, high, urgent]
+          enum:
+          - low
+          - normal
+          - high
+          - urgent
         items:
           type: array
           minItems: 1
           items:
             type: object
-            required: [name, quantity]
+            required:
+            - name
+            - quantity
             properties:
               name:
                 type: string
@@ -1200,23 +1400,20 @@ components:
               category:
                 type: string
                 nullable: true
-
     PurchaseRequestResponse:
       type: object
       properties:
         data:
           $ref: '#/components/schemas/PurchaseRequest'
-
     PurchaseRequestCollection:
       allOf:
-        - $ref: '#/components/schemas/PaginatedCollection'
-        - type: object
-          properties:
-            data:
-              type: array
-              items:
-                $ref: '#/components/schemas/PurchaseRequest'
-
+      - $ref: '#/components/schemas/PaginatedCollection'
+      - type: object
+        properties:
+          data:
+            type: array
+            items:
+              $ref: '#/components/schemas/PurchaseRequest'
     Quote:
       type: object
       properties:
@@ -1230,7 +1427,11 @@ components:
           type: integer
         status:
           type: string
-          enum: [received, analyzed, accepted, rejected]
+          enum:
+          - received
+          - analyzed
+          - accepted
+          - rejected
         reference_number:
           type: string
           nullable: true
@@ -1256,7 +1457,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/QuoteItem'
-
     QuoteItem:
       type: object
       properties:
@@ -1275,10 +1475,13 @@ components:
         total_price:
           type: number
           format: float
-
     QuoteWriteRequest:
       type: object
-      required: [vendor_id, total_amount, currency, items]
+      required:
+      - vendor_id
+      - total_amount
+      - currency
+      - items
       properties:
         vendor_id:
           type: integer
@@ -1308,7 +1511,10 @@ components:
           minItems: 1
           items:
             type: object
-            required: [name, quantity, unit_price]
+            required:
+            - name
+            - quantity
+            - unit_price
             properties:
               name:
                 type: string
@@ -1318,13 +1524,11 @@ components:
               unit_price:
                 type: number
                 format: float
-
     QuoteResponse:
       type: object
       properties:
         data:
           $ref: '#/components/schemas/Quote'
-
     QuoteCollection:
       type: object
       properties:
@@ -1332,7 +1536,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Quote'
-
     QuoteAnalysis:
       type: object
       properties:
@@ -1360,13 +1563,11 @@ components:
           type: number
         model_name:
           type: string
-
     QuoteAnalysisResponse:
       type: object
       properties:
         data:
           $ref: '#/components/schemas/QuoteAnalysis'
-
     QuoteComparison:
       type: object
       properties:
@@ -1387,13 +1588,11 @@ components:
           items:
             type: object
             additionalProperties: true
-
     QuoteComparisonResponse:
       type: object
       properties:
         data:
           $ref: '#/components/schemas/QuoteComparison'
-
     ApprovalStep:
       type: object
       properties:
@@ -1406,12 +1605,18 @@ components:
           nullable: true
         approval_role:
           type: string
-          enum: [manager, finance, admin]
+          enum:
+          - manager
+          - finance
+          - admin
         sequence:
           type: integer
         status:
           type: string
-          enum: [pending, approved, rejected]
+          enum:
+          - pending
+          - approved
+          - rejected
         comment:
           type: string
           nullable: true
@@ -1423,13 +1628,11 @@ components:
           type: string
           format: date-time
           nullable: true
-
     ApprovalStepResponse:
       type: object
       properties:
         data:
           $ref: '#/components/schemas/ApprovalStep'
-
     Invoice:
       type: object
       properties:
@@ -1445,7 +1648,9 @@ components:
           type: string
         status:
           type: string
-          enum: [unpaid, paid]
+          enum:
+          - unpaid
+          - paid
         invoice_date:
           type: string
           format: date
@@ -1474,10 +1679,15 @@ components:
         notes:
           type: string
           nullable: true
-
     InvoiceWriteRequest:
       type: object
-      required: [purchase_request_id, vendor_id, invoice_number, invoice_date, subtotal, currency]
+      required:
+      - purchase_request_id
+      - vendor_id
+      - invoice_number
+      - invoice_date
+      - subtotal
+      - currency
       properties:
         purchase_request_id:
           type: integer
@@ -1505,7 +1715,6 @@ components:
         notes:
           type: string
           nullable: true
-
     InvoiceUpdateRequest:
       type: object
       properties:
@@ -1527,23 +1736,20 @@ components:
         notes:
           type: string
           nullable: true
-
     InvoiceResponse:
       type: object
       properties:
         data:
           $ref: '#/components/schemas/Invoice'
-
     InvoiceCollection:
       allOf:
-        - $ref: '#/components/schemas/PaginatedCollection'
-        - type: object
-          properties:
-            data:
-              type: array
-              items:
-                $ref: '#/components/schemas/Invoice'
-
+      - $ref: '#/components/schemas/PaginatedCollection'
+      - type: object
+        properties:
+          data:
+            type: array
+            items:
+              $ref: '#/components/schemas/Invoice'
     VendorScorecard:
       type: object
       properties:
@@ -1575,13 +1781,11 @@ components:
         calculated_at:
           type: string
           format: date-time
-
     VendorScorecardResponse:
       type: object
       properties:
         data:
           $ref: '#/components/schemas/VendorScorecard'
-
     ActivityLog:
       type: object
       properties:
@@ -1613,23 +1817,20 @@ components:
         updated_at:
           type: string
           format: date-time
-
     ActivityLogResponse:
       type: object
       properties:
         data:
           $ref: '#/components/schemas/ActivityLog'
-
     ActivityLogCollection:
       allOf:
-        - $ref: '#/components/schemas/PaginatedCollection'
-        - type: object
-          properties:
-            data:
-              type: array
-              items:
-                $ref: '#/components/schemas/ActivityLog'
-
+      - $ref: '#/components/schemas/PaginatedCollection'
+      - type: object
+        properties:
+          data:
+            type: array
+            items:
+              $ref: '#/components/schemas/ActivityLog'
     PaginatedCollection:
       type: object
       properties:
@@ -1671,13 +1872,11 @@ components:
               nullable: true
             total:
               type: integer
-
     ErrorResponse:
       type: object
       properties:
         message:
           type: string
-
     ValidationErrorResponse:
       type: object
       properties:
@@ -1689,3 +1888,71 @@ components:
             type: array
             items:
               type: string
+    Attachment:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        organization_id:
+          type: integer
+          example: 1
+        uploaded_by_user_id:
+          type: integer
+          nullable: true
+          example: 3
+        attachable_type:
+          type: string
+          example: App\Models\Quote
+        attachable_id:
+          type: integer
+          example: 1
+        original_name:
+          type: string
+          example: supplier-quote.pdf
+        stored_name:
+          type: string
+          example: 9zL3bXf7ZJvZ.pdf
+        mime_type:
+          type: string
+          nullable: true
+          example: application/pdf
+        size_bytes:
+          type: integer
+          example: 131072
+        download_url:
+          type: string
+          example: /api/v1/attachments/1/download
+        uploaded_by:
+          nullable: true
+          allOf:
+          - $ref: '#/components/schemas/User'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    AttachmentResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Attachment'
+    AttachmentCollection:
+      allOf:
+      - $ref: '#/components/schemas/PaginatedCollection'
+      - type: object
+        properties:
+          data:
+            type: array
+            items:
+              $ref: '#/components/schemas/Attachment'
+    AttachmentUploadRequest:
+      type: object
+      required:
+      - file
+      properties:
+        file:
+          type: string
+          format: binary
+          description: 'Allowed file types: pdf, png, jpg, jpeg, webp, doc, docx, xls, xlsx, txt, csv. Maximum size: 10 MB.'
