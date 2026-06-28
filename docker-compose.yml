@@ -63,6 +63,17 @@ services:
     networks:
       - procurepilot
 
+  ai-service:
+    build:
+      context: ./fastapi-service
+      dockerfile: Dockerfile
+    container_name: procurepilot_ai_service
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    networks:
+      - procurepilot
+
 networks:
   procurepilot:
     driver: bridge

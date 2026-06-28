@@ -8,35 +8,61 @@ use App\Models\ActivityLog;
 use App\Models\User;
 use App\Services\Support\ActivityLogService;
 use Illuminate\Support\Facades\DB;
+use Throwable;
 
 class QuoteAnalysisService
 {
+    private const LOCAL_MODEL_NAME = 'local-deterministic-quote-analyzer-v1';
+    private const FASTAPI_MODEL_NAME = 'fastapi-mock-quote-analyzer-v1';
+
     public function __construct(
-        private readonly ActivityLogService $activityLogService
+        private readonly ActivityLogService $activityLogService,
+        private readonly QuoteAnalysisClient $quoteAnalysisClient
     ) {}
-    private const MODEL_NAME = 'local-deterministic-quote-analyzer-v1';
 
     public function analyze(Quote $quote, ?User $user = null): QuoteAnalysis
     {
         return DB::transaction(function () use ($quote, $user): QuoteAnalysis {
             $quote->loadMissing(['vendor', 'purchaseRequest', 'items']);
 
-            $extractedTerms = $this->extractTerms($quote);
-            $hiddenCosts = $this->detectHiddenCosts($quote);
-            $riskNotes = $this->detectRiskNotes($quote);
-            $summary = $this->buildSummary($quote, $hiddenCosts, $riskNotes);
-            $confidenceScore = $this->calculateConfidenceScore($quote, $riskNotes);
+            $localTerms = $this->extractTerms($quote);
+            $rawText = $this->buildRawTextSnapshot($quote);
+            if ((bool) config('services.ai.enabled')) {
+                try {
+                    $remoteAnalysis = $this->quoteAnalysisClient->analyze(
+                        $this->buildFastApiPayload($quote)
+                    );
+
+                    $summary = (string) ($remoteAnalysis['summary'] ?? $this->buildSummary($quote, [], []));
+                    $hiddenCosts = $this->mapFastApiHiddenCosts($remoteAnalysis);
+                    $riskNotes = $this->mapFastApiRiskNotes($remoteAnalysis);
+                    $confidenceScore = (float) ($remoteAnalysis['confidence_score'] ?? $this->calculateConfidenceScore($quote, $riskNotes));
+                    $modelName = self::FASTAPI_MODEL_NAME;
+                } catch (Throwable) {
+                    $hiddenCosts = $this->detectHiddenCosts($quote);
+                    $riskNotes = $this->detectRiskNotes($quote);
+                    $summary = $this->buildSummary($quote, $hiddenCosts, $riskNotes);
+                    $confidenceScore = $this->calculateConfidenceScore($quote, $riskNotes);
+                    $modelName = self::LOCAL_MODEL_NAME;
+                }
+            } else {
+                $hiddenCosts = $this->detectHiddenCosts($quote);
+                $riskNotes = $this->detectRiskNotes($quote);
+                $summary = $this->buildSummary($quote, $hiddenCosts, $riskNotes);
+                $confidenceScore = $this->calculateConfidenceScore($quote, $riskNotes);
+                $modelName = self::LOCAL_MODEL_NAME;
+            }
 
             $analysis = QuoteAnalysis::updateOrCreate(
                 ['quote_id' => $quote->id],
                 [
-                    'raw_text' => $this->buildRawTextSnapshot($quote),
+                    'raw_text' => $rawText,
                     'summary' => $summary,
-                    'extracted_terms' => $extractedTerms,
+                    'extracted_terms' => $localTerms,
                     'hidden_costs' => $hiddenCosts,
                     'risk_notes' => $riskNotes,
                     'confidence_score' => $confidenceScore,
-                    'model_name' => self::MODEL_NAME,
+                    'model_name' => $modelName,
                     'status' => QuoteAnalysis::STATUS_COMPLETED,
                 ]
             );
@@ -61,6 +87,51 @@ class QuoteAnalysisService
 
             return $analysis->fresh();
         });
+    }
+
+    private function buildFastApiPayload(Quote $quote): array
+    {
+        return [
+            'quote_id' => $quote->id,
+            'vendor_name' => $quote->vendor?->name ?? 'Unknown vendor',
+            'total_amount' => (float) $quote->total_amount,
+            'currency' => $quote->currency,
+            'delivery_days' => $quote->delivery_days,
+            'payment_terms' => $quote->payment_terms,
+            'warranty_months' => $quote->warranty_months,
+            'items' => $quote->items->map(fn($item): array => [
+                'description' => (string) $item->description,
+                'quantity' => (float) $item->quantity,
+                'unit_price' => (float) $item->unit_price,
+                'total' => (float) $item->total_price,
+            ])->values()->all(),
+        ];
+    }
+
+    private function mapFastApiHiddenCosts(array $remoteAnalysis): array
+    {
+        return array_values(array_unique(
+            $remoteAnalysis['hidden_costs_notes'] ?? []
+        ));
+    }
+
+    private function mapFastApiRiskNotes(array $remoteAnalysis): array
+    {
+        $riskNotes = [];
+
+        if (($remoteAnalysis['risk_level'] ?? 'low') !== 'low') {
+            $riskNotes[] = 'AI service detected ' . $remoteAnalysis['risk_level'] . ' risk level';
+        }
+
+        foreach (($remoteAnalysis['hidden_costs_notes'] ?? []) as $note) {
+            $riskNotes[] = $note;
+        }
+
+        if (! empty($remoteAnalysis['recommendation'])) {
+            $riskNotes[] = $remoteAnalysis['recommendation'];
+        }
+
+        return array_values(array_unique($riskNotes));
     }
 
     private function extractTerms(Quote $quote): array
