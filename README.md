@@ -12,49 +12,55 @@ The project models a complete procurement workflow: employees create purchase re
 
 ## Table of Contents
 
-- [Problem](#problem)
-- [Solution](#solution)
-- [Core Features](#core-features)
-- [Architecture](#architecture)
-- [Tech Stack](#tech-stack)
-- [Procurement Workflow](#procurement-workflow)
-- [Roles and Permissions](#roles-and-permissions)
-- [AI Design](#ai-design)
-- [Database Model](#database-model)
-- [API Overview](#api-overview)
-- [Activity Logs](#activity-logs)
-- [Security and Authorization](#security-and-authorization)
-- [Testing](#testing)
-- [Local Setup](#local-setup)
-- [Demo Credentials](#demo-credentials)
-- [Project Status](#project-status)
-- [Roadmap](#roadmap)
-- [Portfolio Context](#portfolio-context)
+* [Problem](#problem)
+* [Solution](#solution)
+* [Core Features](#core-features)
+* [Architecture](#architecture)
+* [Tech Stack](#tech-stack)
+* [Procurement Workflow](#procurement-workflow)
+* [Roles and Permissions](#roles-and-permissions)
+* [AI Design](#ai-design)
+* [Database Model](#database-model)
+* [API Overview](#api-overview)
+* [API Documentation](#api-documentation)
+* [Activity Logs](#activity-logs)
+* [Security and Authorization](#security-and-authorization)
+* [Testing](#testing)
+* [Local Setup](#local-setup)
+* [Docker Setup](#docker-setup)
+* [Demo Credentials](#demo-credentials)
+* [Project Status](#project-status)
+* [Roadmap](#roadmap)
+* [Portfolio Context](#portfolio-context)
+* [License](#license)
 
 ---
 
 ## Problem
 
-Procurement workflows in small and medium-sized companies are often fragmented across emails, spreadsheets, PDFs, and manual approvals. This creates problems such as:
+Procurement workflows in small and medium-sized companies are often fragmented across emails, spreadsheets, PDFs, and manual approvals. This creates several operational risks:
 
-- poor visibility over purchase requests,
-- inconsistent supplier evaluation,
-- missing approval traceability,
-- manual quote comparison,
-- invoice and VAT tracking mistakes,
-- weak supplier performance history.
+* poor visibility over purchase requests,
+* inconsistent supplier evaluation,
+* missing approval traceability,
+* manual quote comparison,
+* invoice and VAT tracking mistakes,
+* weak supplier performance history,
+* limited auditability for procurement decisions.
 
-ProcurePilot AI addresses these problems with a structured, API-first procurement backend built around clean business workflows, multi-tenant isolation, authorization policies, automated quote analysis, deterministic comparison logic, and audit-ready activity logs.
+**ProcurePilot AI** addresses these problems with a structured, API-first procurement backend built around clean business workflows, multi-tenant isolation, authorization policies, automated quote analysis, deterministic comparison logic, and audit-ready activity logs.
 
 ---
 
 ## Solution
 
-ProcurePilot AI provides a backend system where each organization can manage its procurement process independently:
+ProcurePilot AI provides a backend system where each organization can manage its procurement process independently.
+
+The main workflow:
 
 1. A requester creates a purchase request with line items.
-2. Procurement adds supplier quotes.
-3. The system analyzes quote terms and hidden costs.
+2. Procurement collects supplier quotes.
+3. The system analyzes quote terms and hidden cost indicators.
 4. The system compares quotes using deterministic scoring.
 5. Procurement sends the selected offer for approval.
 6. Managers, finance, and admins approve based on budget thresholds.
@@ -62,7 +68,7 @@ ProcurePilot AI provides a backend system where each organization can manage its
 8. Vendor scorecards are calculated from quotes and invoices.
 9. Activity logs capture important business events.
 
-The goal is not just to build CRUD endpoints, but to demonstrate a realistic Laravel SaaS backend with maintainable architecture and production-style patterns.
+The goal is not just to build CRUD endpoints, but to demonstrate a realistic Laravel SaaS backend with maintainable architecture, strong authorization, automated tests, Dockerized development, CI, and an AI microservice integration.
 
 ---
 
@@ -70,115 +76,126 @@ The goal is not just to build CRUD endpoints, but to demonstrate a realistic Lar
 
 ### Authentication
 
-- Laravel Sanctum bearer token authentication.
-- Login, current user, and logout endpoints.
-- API routes under `/api/v1`.
+* Laravel Sanctum bearer token authentication.
+* Login, current user, and logout endpoints.
+* Protected API routes under `/api/v1`.
 
 ### Multi-Tenant SaaS Foundation
 
-- Organization-scoped resources.
-- Users belong to organizations and optionally departments.
-- All major records are isolated by `organization_id`.
-- Cross-organization access is blocked through policies and service-level validation.
+* Organization-scoped resources.
+* Users belong to organizations and optionally departments.
+* All major records are isolated by `organization_id`.
+* Cross-organization access is blocked through policies and service-level validation.
+* Request bodies are not trusted for tenant ownership.
 
 ### Departments
 
-- Admin-managed departments.
-- Department listing and filtering.
-- Unique department names per organization.
-- Protection against cross-organization access.
+* Admin-managed departments.
+* Department listing and filtering.
+* Unique department names per organization.
+* Protection against cross-organization access.
+* Role-based create/update/delete authorization.
 
 ### Vendors
 
-- Vendor management with contacts.
-- Vendor filtering by status and search terms.
-- Requesters can see active vendors only.
-- Admin and procurement users can create and update vendors.
-- Blocked vendors cannot be used for new quotes.
+* Vendor management with contacts.
+* Vendor filtering by status and search terms.
+* Requesters can see active vendors only.
+* Admin and procurement users can create and update vendors.
+* Blocked vendors cannot be used for new quotes.
+* Vendor scorecards are generated on demand.
 
 ### Purchase Requests
 
-- Requesters can create purchase requests with items.
-- At least one item is required during creation.
-- Draft requests can be updated.
-- Draft requests can be submitted.
-- Submitted requests cannot be edited by requesters.
-- Requesters see their own requests.
-- Managers see department requests.
-- Procurement sees organization-wide requests.
+* Requesters can create purchase requests with items.
+* At least one item is required during creation.
+* Draft requests can be updated.
+* Draft requests can be submitted.
+* Submitted requests cannot be edited by requesters.
+* Requesters see their own requests.
+* Managers see department requests.
+* Procurement sees organization-wide requests.
 
 ### Quotes
 
-- Procurement can add quotes to submitted purchase requests.
-- Quotes contain supplier information, payment terms, delivery days, warranty, and quote items.
-- Quote items can be replaced during update.
-- Quote access is organization-scoped.
+* Procurement can add quotes to submitted purchase requests.
+* Quotes contain supplier information, payment terms, delivery days, warranty, and quote items.
+* Quote items can be replaced during update.
+* Blocked vendors cannot be used for quote creation.
+* Quote access is organization-scoped.
 
 ### AI Quote Analysis
 
-- Deterministic local analysis implementation for MVP reliability.
-- Extracts summary, hidden cost indicators, risk notes, recommendation notes, and confidence score.
-- Designed to be replaced or extended by a FastAPI AI microservice later.
+* Hybrid analysis architecture:
+
+  * local deterministic Laravel analyzer,
+  * external FastAPI AI microservice.
+* Extracts summary, hidden cost indicators, risk notes, recommendation notes, and confidence score.
+* Supports regeneration.
+* Keeps tests deterministic by falling back to local analysis when the AI microservice is disabled.
+* Avoids automatic approval or rejection decisions.
 
 ### Quote Comparison
 
-- Generates quote comparison for a purchase request.
-- Requires at least two quotes.
-- Uses deterministic scoring rather than uncontrolled LLM decision-making.
-- Stores comparison results.
-- Selects a recommended quote based on weighted scoring.
+* Generates quote comparison for a purchase request.
+* Requires at least two quotes.
+* Uses deterministic scoring rather than uncontrolled LLM decision-making.
+* Stores comparison results.
+* Selects a recommended quote based on weighted scoring.
 
 Scoring weights:
 
-| Factor | Weight |
-|---|---:|
-| Total amount | 35% |
-| Delivery days | 20% |
-| Payment terms | 15% |
-| Warranty months | 10% |
-| Hidden costs | 10% |
-| Vendor status | 10% |
+| Factor          | Weight |
+| --------------- | -----: |
+| Total amount    |    35% |
+| Delivery days   |    20% |
+| Payment terms   |    15% |
+| Warranty months |    10% |
+| Hidden costs    |    10% |
+| Vendor status   |    10% |
 
 ### Approval Workflow
 
-- Procurement/Admin can send purchase requests for approval.
-- Requires a generated comparison and recommended quote.
-- Approval steps are generated based on estimated budget.
-- Sequential approval is enforced.
-- Requesters cannot approve their own purchase requests.
-- Rejections require comments.
+* Procurement/Admin can send purchase requests for approval.
+* Requires a generated comparison and recommended quote.
+* Approval steps are generated based on estimated budget.
+* Sequential approval is enforced.
+* Requesters cannot approve their own purchase requests.
+* Rejections require comments.
+* Approved purchase requests receive the recommended quote as the approved quote.
 
 Approval thresholds:
 
-| Estimated Budget | Approval Chain |
-|---:|---|
-| Below 1,000 EUR | Department Manager |
-| 1,000 - 10,000 EUR | Department Manager + Finance |
-| Above 10,000 EUR | Department Manager + Finance + Admin |
+|   Estimated Budget | Approval Chain                       |
+| -----------------: | ------------------------------------ |
+|    Below 1,000 EUR | Department Manager                   |
+| 1,000 - 10,000 EUR | Department Manager + Finance         |
+|   Above 10,000 EUR | Department Manager + Finance + Admin |
 
 ### Invoices and VAT
 
-- Finance/Admin can create invoices.
-- Invoices are linked to approved, ordered, or invoiced purchase requests.
-- Vendor consistency is validated against the approved quote.
-- VAT is calculated automatically.
-- Default organization VAT can be used; custom VAT rate is supported.
-- Paid invoices cannot be edited.
-- Marking an invoice as paid updates the related purchase request.
+* Finance/Admin can create invoices.
+* Invoices are linked to approved, ordered, or invoiced purchase requests.
+* Vendor consistency is validated against the approved quote.
+* VAT is calculated automatically.
+* Default organization VAT can be used.
+* Custom VAT rate is supported.
+* Paid invoices cannot be edited.
+* Marking an invoice as paid updates the related purchase request.
 
 ### Vendor Scorecards
 
-- Calculates vendor performance metrics.
-- Tracks total quotes, accepted quotes, win rate, average delivery days, invoice issues, paid invoices, total invoiced amount, and overall score.
-- Blocked vendors receive an overall score of zero.
-- Scorecards are generated or updated on demand.
+* Calculates vendor performance metrics.
+* Tracks total quotes, accepted quotes, win rate, average delivery days, invoice issues, paid invoices, total invoiced amount, and overall score.
+* Blocked vendors receive an overall score of zero.
+* Scorecards are generated or updated on demand.
 
 ### Activity Logs
 
-- Audit trail for major business events.
-- Organization-scoped activity log records.
-- Supports user, event, subject, and metadata tracking.
-- Filterable API for procurement, finance, and admin users.
+* Audit trail for major business events.
+* Organization-scoped activity log records.
+* Supports user, event, subject, and metadata tracking.
+* Filterable API for procurement, finance, and admin users.
 
 ---
 
@@ -195,42 +212,74 @@ app/
 ├── Models/                   # Eloquent models, relationships, casts, constants
 ├── Policies/                 # Authorization and tenant isolation rules
 └── Services/
-    ├── AI/                   # Quote analysis service
+    ├── AI/                   # Quote analysis and AI client integration
     ├── Procurement/          # Procurement business workflows
     └── Support/              # Shared supporting services
 ```
 
+FastAPI microservice structure:
+
+```text
+fastapi-service/
+├── app/
+│   ├── main.py
+│   ├── schemas.py
+│   ├── providers/
+│   │   └── mock_provider.py
+│   └── services/
+│       └── quote_analyzer.py
+├── tests/
+│   └── test_analyze_quote.py
+├── Dockerfile
+├── pytest.ini
+└── requirements.txt
+```
+
 Architectural principles:
 
-- Controllers stay thin.
-- Business logic lives in services.
-- Validation lives in Form Requests.
-- JSON output is normalized through Resources.
-- Authorization is enforced through Policies.
-- Complex writes are wrapped in database transactions.
-- Organization scope is derived from the authenticated user, not trusted from request bodies.
-- Feature tests cover business rules, permissions, and cross-tenant isolation.
+* Controllers stay thin.
+* Business logic lives in services.
+* Validation lives in Form Requests.
+* JSON output is normalized through Resources.
+* Authorization is enforced through Policies.
+* Complex writes are wrapped in database transactions.
+* Organization scope is derived from the authenticated user.
+* Feature tests cover business rules, permissions, and cross-tenant isolation.
+* AI analysis is isolated behind a Laravel client/service boundary.
+* The Laravel API remains the system of record.
 
 ---
 
 ## Tech Stack
 
-- PHP
-- Laravel
-- Laravel Sanctum
-- MySQL
-- Eloquent ORM
-- PHPUnit / Laravel Feature Tests
-- API-first backend design
+### Backend
 
-Planned additions:
+* PHP 8.3
+* Laravel
+* Laravel Sanctum
+* Eloquent ORM
+* MySQL 8.4
+* Redis
+* PHPUnit / Laravel Feature Tests
 
-- Docker
-- Redis queue support
-- FastAPI AI microservice
-- OpenAPI documentation
-- Postman collection
-- GitHub Actions CI
+### AI Microservice
+
+* Python 3.12
+* FastAPI
+* Pydantic
+* Uvicorn
+* Pytest
+* HTTP-based Laravel integration
+
+### DevOps and Tooling
+
+* Docker
+* Docker Compose
+* Nginx
+* Mailpit
+* GitHub Actions CI
+* OpenAPI documentation
+* Postman collection
 
 ---
 
@@ -264,14 +313,14 @@ Activity logs provide audit trail
 
 ## Roles and Permissions
 
-| Role | Main Capabilities |
-|---|---|
-| Admin | Full organization-level management, including departments, vendors, approvals, invoices, and scorecards |
-| Procurement Officer | Manage vendors, quotes, comparisons, and approval submission |
-| Requester | Create and submit own purchase requests, view active vendors and own request analysis |
-| Department Manager | View department purchase requests and approve relevant approval steps |
-| Finance Manager | Handle invoice workflow and finance approval steps |
-| Viewer | Read-only access where allowed |
+| Role                | Main Capabilities                                                                                       |
+| ------------------- | ------------------------------------------------------------------------------------------------------- |
+| Admin               | Full organization-level management, including departments, vendors, approvals, invoices, and scorecards |
+| Procurement Officer | Manage vendors, quotes, comparisons, and approval submission                                            |
+| Requester           | Create and submit own purchase requests, view active vendors and own request analysis                   |
+| Department Manager  | View department purchase requests and approve relevant approval steps                                   |
+| Finance Manager     | Handle invoice workflow and finance approval steps                                                      |
+| Viewer              | Read-only access where allowed                                                                          |
 
 Authorization is enforced through Laravel Policies and tested with feature tests.
 
@@ -279,32 +328,60 @@ Authorization is enforced through Laravel Policies and tested with feature tests
 
 ## AI Design
 
-The current AI component is implemented as a deterministic local Laravel service. This keeps the MVP testable, stable, and independent from external AI provider availability.
+ProcurePilot AI uses a hybrid AI architecture.
+
+The Laravel backend remains the system of record for procurement data, authorization, workflows, and persistence. Quote analysis can be handled either by a local deterministic analyzer or by a separate FastAPI AI microservice.
+
+The local deterministic analyzer is used as a stable fallback and keeps the automated test suite reproducible. The FastAPI service is used in Docker/development environments when enabled through environment variables.
 
 Current behavior:
 
-- analyzes submitted quote data,
-- identifies hidden cost indicators,
-- extracts risk and recommendation notes,
-- stores confidence score,
-- supports regeneration,
-- avoids automatic approval or rejection decisions.
+* analyzes submitted quote data,
+* identifies hidden cost indicators,
+* extracts risk and recommendation notes,
+* stores confidence score,
+* supports regeneration,
+* avoids automatic approval or rejection decisions,
+* falls back to local analysis if the external AI service is unavailable.
 
-Future AI architecture:
+AI service flow:
 
 ```text
 Laravel API
    ↓
-QuoteAnalysisJob
+QuoteAnalysisService
    ↓
-AI Client
+QuoteAnalysisClient
    ↓
 FastAPI Service
    ↓
-Mock Provider / OpenAI-Compatible Provider
+Mock Provider / future OpenAI-Compatible Provider
+   ↓
+Structured quote analysis response
 ```
 
-The Laravel backend remains the system of record. The FastAPI service will only handle extraction, summarization, and analysis tasks.
+Environment configuration:
+
+```env
+AI_SERVICE_ENABLED=true
+AI_SERVICE_URL=http://ai-service:8000
+AI_SERVICE_TIMEOUT=5
+```
+
+The FastAPI service exposes:
+
+```http
+GET  /health
+POST /analyze-quote
+```
+
+Interactive FastAPI documentation is available locally at:
+
+```text
+http://localhost:8001/docs
+```
+
+In test environments, Laravel uses the local deterministic analyzer by default to keep tests stable and reproducible.
 
 ---
 
@@ -312,22 +389,22 @@ The Laravel backend remains the system of record. The FastAPI service will only 
 
 Main tables currently covered by the backend:
 
-- `organizations`
-- `departments`
-- `users`
-- `vendors`
-- `vendor_contacts`
-- `purchase_requests`
-- `purchase_request_items`
-- `quotes`
-- `quote_items`
-- `quote_analyses`
-- `quote_comparisons`
-- `approval_steps`
-- `invoices`
-- `vendor_scorecards`
-- `activity_logs`
-- `personal_access_tokens`
+* `organizations`
+* `departments`
+* `users`
+* `vendors`
+* `vendor_contacts`
+* `purchase_requests`
+* `purchase_request_items`
+* `quotes`
+* `quote_items`
+* `quote_analyses`
+* `quote_comparisons`
+* `approval_steps`
+* `invoices`
+* `vendor_scorecards`
+* `activity_logs`
+* `personal_access_tokens`
 
 ---
 
@@ -427,31 +504,48 @@ GET /api/v1/activity-logs?from=2026-06-01&to=2026-06-30
 
 ---
 
+## API Documentation
+
+The project includes API documentation artifacts for review and manual testing:
+
+```text
+docs/openapi.yaml
+docs/postman_collection.json
+```
+
+Recommended usage:
+
+* Use the OpenAPI file to inspect available endpoints, payloads, responses, and authentication requirements.
+* Import the Postman collection to test the API manually with bearer token authentication.
+* Use demo credentials from the seed data to authenticate and exercise the procurement workflow.
+
+---
+
 ## Activity Logs
 
 The activity log module captures auditable business events such as:
 
-- `purchase_request.created`
-- `purchase_request.submitted`
-- `quote.created`
-- `quote.analysis_completed`
-- `comparison.generated`
-- `approval.approved`
-- `approval.rejected`
-- `invoice.received`
-- `invoice.paid`
-- `vendor_scorecard.calculated`
+* `purchase_request.created`
+* `purchase_request.submitted`
+* `quote.created`
+* `quote.analysis_completed`
+* `comparison.generated`
+* `approval.approved`
+* `approval.rejected`
+* `invoice.received`
+* `invoice.paid`
+* `vendor_scorecard.calculated`
 
 Each log record stores:
 
-- organization,
-- user,
-- event name,
-- polymorphic subject,
-- metadata,
-- IP address,
-- user agent,
-- timestamps.
+* organization,
+* user,
+* event name,
+* polymorphic subject,
+* metadata,
+* IP address,
+* user agent,
+* timestamps.
 
 This makes the system more suitable for compliance-heavy procurement workflows.
 
@@ -461,46 +555,79 @@ This makes the system more suitable for compliance-heavy procurement workflows.
 
 Security design:
 
-- Sanctum bearer tokens protect all application endpoints except login.
-- Policies enforce role-based access control.
-- Every major business resource is scoped by `organization_id`.
-- Request bodies are not trusted for tenant ownership.
-- Cross-organization access is tested and blocked.
-- Requesters cannot approve their own purchase requests.
-- Blocked vendors cannot be used for quote creation.
-- Paid invoices cannot be modified.
+* Sanctum bearer tokens protect all application endpoints except login.
+* Policies enforce role-based access control.
+* Every major business resource is scoped by `organization_id`.
+* Request bodies are not trusted for tenant ownership.
+* Cross-organization access is tested and blocked.
+* Requesters cannot approve their own purchase requests.
+* Blocked vendors cannot be used for quote creation.
+* Paid invoices cannot be modified.
+* AI analysis does not automatically approve or reject supplier offers.
 
 ---
 
 ## Testing
 
-Current test result:
+Current Laravel test result:
 
 ```text
 Tests: 77 passed (269 assertions)
 ```
 
-Covered areas:
+Current FastAPI test result:
 
-- authentication-related protected routes,
-- department management,
-- vendor management,
-- purchase request creation and submission,
-- quote creation and updates,
-- quote analysis,
-- quote comparison,
-- approval workflow,
-- invoices and VAT,
-- vendor scorecards,
-- activity logs,
-- authorization rules,
-- cross-organization isolation,
-- validation errors.
+```text
+3 passed
+```
 
-Run tests:
+Covered Laravel areas:
+
+* authentication-related protected routes,
+* department management,
+* vendor management,
+* purchase request creation and submission,
+* quote creation and updates,
+* quote analysis,
+* quote comparison,
+* approval workflow,
+* invoices and VAT,
+* vendor scorecards,
+* activity logs,
+* authorization rules,
+* cross-organization isolation,
+* validation errors.
+
+Run Laravel tests locally:
 
 ```bash
 php artisan test
+```
+
+Run Laravel tests inside Docker:
+
+```bash
+docker compose exec app php artisan test
+```
+
+Run FastAPI tests locally:
+
+```bash
+cd fastapi-service
+python -m venv .venv
+. .venv/bin/activate
+pip install -r requirements.txt
+pytest
+```
+
+On Windows PowerShell:
+
+```powershell
+cd fastapi-service
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+pytest
 ```
 
 Useful verification commands:
@@ -517,10 +644,11 @@ php artisan test
 
 ### Requirements
 
-- PHP 8.2+
-- Composer
-- MySQL
-- Node.js and npm if frontend assets are needed by the Laravel skeleton
+* PHP 8.2+
+* Composer
+* MySQL
+* Python 3.12+ for the FastAPI service
+* Node.js and npm if frontend assets are needed by the Laravel skeleton
 
 ### Installation
 
@@ -549,7 +677,7 @@ Run migrations and seeders:
 php artisan migrate --seed
 ```
 
-Start the API:
+Start the Laravel API:
 
 ```bash
 php artisan serve
@@ -567,29 +695,73 @@ php artisan test
 
 The project includes a Docker-based local development environment with:
 
-- PHP 8.3 FPM
-- Nginx
-- MySQL 8.4
-- Redis
-- Mailpit
+* PHP 8.3 FPM
+* Nginx
+* MySQL 8.4
+* Redis
+* Mailpit
+* FastAPI AI service
 
 ### Start the containers
 
 ```bash
 docker compose up -d --build
+```
+
+### Docker Services
+
+| Service             | URL / Port              | Purpose                     |
+| ------------------- | ----------------------- | --------------------------- |
+| Laravel API / Nginx | `http://localhost:8000` | Main API entrypoint         |
+| MySQL               | `localhost:3308`        | Database                    |
+| Redis               | `localhost:6380`        | Cache / queue-ready service |
+| Mailpit             | `http://localhost:8026` | Local email testing         |
+| FastAPI AI Service  | `http://localhost:8001` | Quote analysis microservice |
+
+FastAPI health check:
+
+```bash
+curl http://localhost:8001/health
+```
+
+FastAPI interactive docs:
+
+```text
+http://localhost:8001/docs
+```
+
+Run Laravel migrations and seeders inside Docker:
+
+```bash
+docker compose exec app php artisan migrate --seed
+```
+
+Run Laravel tests inside Docker:
+
+```bash
+docker compose exec app php artisan test
+```
+
+Stop the containers:
+
+```bash
+docker compose down
+```
+
+---
 
 ## Demo Credentials
 
 If the demo seeder is enabled, the intended demo users are:
 
-| Role | Email | Password |
-|---|---|---|
-| Admin | `admin@procurepilot.test` | `password` |
-| Requester | `requester@procurepilot.test` | `password` |
+| Role                | Email                           | Password   |
+| ------------------- | ------------------------------- | ---------- |
+| Admin               | `admin@procurepilot.test`       | `password` |
+| Requester           | `requester@procurepilot.test`   | `password` |
 | Procurement Officer | `procurement@procurepilot.test` | `password` |
-| Department Manager | `manager@procurepilot.test` | `password` |
-| Finance Manager | `finance@procurepilot.test` | `password` |
-| Viewer | `viewer@procurepilot.test` | `password` |
+| Department Manager  | `manager@procurepilot.test`     | `password` |
+| Finance Manager     | `finance@procurepilot.test`     | `password` |
+| Viewer              | `viewer@procurepilot.test`      | `password` |
 
 Login example:
 
@@ -615,63 +787,60 @@ Authorization: Bearer {token}
 
 Completed:
 
-- Laravel API backend
-- Sanctum authentication
-- Multi-tenant organization scoping
-- Roles and policies
-- Departments API
-- Vendors and vendor contacts API
-- Purchase requests and items API
-- Quotes and quote items API
-- Deterministic quote analysis
-- Quote comparison and recommendation scoring
-- Approval workflow
-- Invoices and VAT calculation
-- Vendor scorecard API
-- Activity logs API
-- Feature test coverage
+* Laravel API backend
+* Sanctum authentication
+* Multi-tenant organization scoping
+* Roles and policies
+* Departments API
+* Vendors and vendor contacts API
+* Purchase requests and items API
+* Quotes and quote items API
+* Local deterministic quote analysis
+* FastAPI quote analysis microservice
+* Laravel AI client integration with fallback behavior
+* Quote comparison and recommendation scoring
+* Approval workflow
+* Invoices and VAT calculation
+* Vendor scorecard API
+* Activity logs API
+* Docker development setup
+* GitHub Actions CI
+* OpenAPI documentation
+* Postman collection
+* Feature test coverage
 
-In progress / planned:
+Remaining / planned:
 
-- OpenAPI documentation
-- Postman collection
-- Docker setup
-- GitHub Actions CI
-- FastAPI AI microservice
-- Attachments and file uploads
-- Screenshots and demo script
+* Attachments and file uploads
+* Optional queue-based `QuoteAnalysisJob`
+* OpenAI-compatible provider implementation
+* Screenshots and demo script
+* Final portfolio polish
 
 ---
 
 ## Roadmap
 
-### Next Milestone: API Documentation
-
-- Add `docs/openapi.yaml`.
-- Add `docs/postman_collection.json`.
-- Document authentication, payloads, responses, and errors.
-
-### DevOps Milestone
-
-- Add `Dockerfile`.
-- Add `docker-compose.yml` with app, MySQL, Redis, and optional Mailpit.
-- Add GitHub Actions workflow for automated tests.
-
-### AI Service Milestone
-
-- Add FastAPI service.
-- Add `/analyze-quote` endpoint.
-- Add mock provider.
-- Add OpenAI-compatible provider interface.
-- Add Laravel AI client.
-- Add queued `QuoteAnalysisJob`.
-
 ### Product Polish Milestone
 
-- Add quote and invoice attachments.
-- Add screenshots.
-- Add demo walkthrough.
-- Add architecture diagram.
+* Add quote and invoice attachments.
+* Add file upload validation.
+* Link uploaded files to purchase requests, quotes, and invoices.
+* Add screenshots for the full procurement flow.
+* Add a demo walkthrough script.
+
+### AI Enhancement Milestone
+
+* Add queued `QuoteAnalysisJob`.
+* Add OpenAI-compatible provider interface.
+* Add provider selection through environment configuration.
+* Add more structured extraction fields for quote analysis.
+
+### Portfolio Milestone
+
+* Add architecture diagram.
+* Add screenshots of API results, test results, Docker containers, and CI.
+* Add a concise demo script for recruiters and technical reviewers.
 
 ---
 
@@ -681,17 +850,20 @@ This project is designed as a backend portfolio project for Laravel SaaS and AI-
 
 It demonstrates:
 
-- production-style Laravel backend architecture,
-- multi-tenant SaaS data modeling,
-- role-based authorization,
-- service-layer business logic,
-- API-first development,
-- procurement workflow modeling,
-- deterministic AI-assisted decision support,
-- test-driven confidence for business rules,
-- auditability through activity logs.
+* production-style Laravel backend architecture,
+* multi-tenant SaaS data modeling,
+* role-based authorization,
+* service-layer business logic,
+* API-first development,
+* procurement workflow modeling,
+* deterministic AI-assisted decision support,
+* FastAPI microservice integration,
+* Dockerized development,
+* automated CI,
+* test-driven confidence for business rules,
+* auditability through activity logs.
 
-The project is intentionally focused on backend depth rather than frontend UI. It is suitable for showcasing Laravel, SaaS architecture, clean code, and business workflow engineering.
+The project is intentionally focused on backend depth rather than frontend UI. It is suitable for showcasing Laravel, SaaS architecture, clean code, API design, DevOps basics, and business workflow engineering.
 
 ---
 
