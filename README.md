@@ -1,5 +1,7 @@
 # ProcurePilot AI
 
+![Laravel CI](https://github.com/Will-ammari/procurepilot-ai/actions/workflows/ci.yml/badge.svg)
+
 **ProcurePilot AI** is a production-style Laravel API backend for AI-assisted procurement management, designed for small and medium-sized companies in the German and European market.
 
 The project models a complete procurement workflow: employees create purchase requests, procurement teams collect supplier quotes, the system analyzes and compares offers, approval steps are generated based on budget thresholds, finance tracks invoices and VAT, and vendor performance is calculated through scorecards.
