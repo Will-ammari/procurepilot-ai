@@ -22,3 +22,9 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Python / FastAPI
+fastapi-service/.venv/
+fastapi-service/**/__pycache__/
+fastapi-service/.pytest_cache/
+*.pyc
