@@ -1,0 +1,1691 @@
+openapi: 3.0.3
+info:
+  title: ProcurePilot AI API
+  version: 1.0.0
+  description: |
+    ProcurePilot AI is a Laravel API-first SaaS backend for procurement workflows in German and European SMBs.
+
+    The API covers authentication, organization-scoped departments, vendors, purchase requests, quotes,
+    deterministic quote analysis, quote comparison, approval workflows, invoices with VAT, vendor scorecards,
+    and activity logs.
+
+    Current verified backend status:
+    - 77 feature/unit tests passing
+    - 269 assertions
+    - Sanctum Bearer token authentication
+    - Multi-tenant organization isolation
+    - MVC + Services + Form Requests + Resources + Policies
+  contact:
+    name: ProcurePilot AI
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Local Laravel development server
+
+tags:
+  - name: Auth
+    description: Authentication and current user endpoints
+  - name: Departments
+    description: Organization-scoped department management
+  - name: Vendors
+    description: Vendor and vendor contact management
+  - name: Purchase Requests
+    description: Purchase request lifecycle and items
+  - name: Quotes
+    description: Supplier quotes and quote items
+  - name: AI Quote Analysis
+    description: Deterministic MVP quote analysis endpoints
+  - name: Quote Comparison
+    description: Rule-based quote comparison and recommendation
+  - name: Approval Workflow
+    description: Multi-step approval routing by budget threshold
+  - name: Invoices
+    description: Invoice tracking and VAT calculation
+  - name: Vendor Scorecards
+    description: Vendor performance metrics
+  - name: Activity Logs
+    description: Organization-scoped audit trail
+
+security:
+  - bearerAuth: []
+
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login and issue Sanctum token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: admin@procurepilot.test
+              password: password
+      responses:
+        '200':
+          description: Authenticated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /me:
+    get:
+      tags: [Auth]
+      summary: Get authenticated user
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Revoke current access token
+      responses:
+        '204':
+          description: Logged out
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /departments:
+    get:
+      tags: [Departments]
+      summary: List organization departments
+      parameters:
+        - $ref: '#/components/parameters/SearchQuery'
+        - $ref: '#/components/parameters/PerPageQuery'
+      responses:
+        '200':
+          description: Department collection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DepartmentCollection'
+    post:
+      tags: [Departments]
+      summary: Create department
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DepartmentWriteRequest'
+      responses:
+        '201':
+          description: Department created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DepartmentResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /departments/{department}:
+    get:
+      tags: [Departments]
+      summary: Show department
+      parameters:
+        - $ref: '#/components/parameters/DepartmentId'
+      responses:
+        '200':
+          description: Department details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DepartmentResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Departments]
+      summary: Update department
+      parameters:
+        - $ref: '#/components/parameters/DepartmentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DepartmentWriteRequest'
+      responses:
+        '200':
+          description: Department updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DepartmentResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [Departments]
+      summary: Delete department
+      parameters:
+        - $ref: '#/components/parameters/DepartmentId'
+      responses:
+        '204':
+          description: Department deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /vendors:
+    get:
+      tags: [Vendors]
+      summary: List vendors
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive, blocked]
+        - name: search
+          in: query
+          schema:
+            type: string
+        - $ref: '#/components/parameters/PerPageQuery'
+      responses:
+        '200':
+          description: Vendor collection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VendorCollection'
+    post:
+      tags: [Vendors]
+      summary: Create vendor with contacts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VendorWriteRequest'
+      responses:
+        '201':
+          description: Vendor created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VendorResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /vendors/{vendor}:
+    get:
+      tags: [Vendors]
+      summary: Show vendor
+      parameters:
+        - $ref: '#/components/parameters/VendorId'
+      responses:
+        '200':
+          description: Vendor details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VendorResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    patch:
+      tags: [Vendors]
+      summary: Update vendor and replace contacts
+      parameters:
+        - $ref: '#/components/parameters/VendorId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VendorWriteRequest'
+      responses:
+        '200':
+          description: Vendor updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VendorResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [Vendors]
+      summary: Delete vendor
+      parameters:
+        - $ref: '#/components/parameters/VendorId'
+      responses:
+        '204':
+          description: Vendor deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /vendors/{vendor}/scorecard:
+    get:
+      tags: [Vendor Scorecards]
+      summary: Calculate and return vendor scorecard
+      parameters:
+        - $ref: '#/components/parameters/VendorId'
+      responses:
+        '200':
+          description: Vendor scorecard
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VendorScorecardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /purchase-requests:
+    get:
+      tags: [Purchase Requests]
+      summary: List purchase requests visible to current user
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, submitted, received_quotes, pending_approval, approved, rejected, ordered, invoiced, paid]
+        - name: department_id
+          in: query
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/PerPageQuery'
+      responses:
+        '200':
+          description: Purchase request collection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseRequestCollection'
+    post:
+      tags: [Purchase Requests]
+      summary: Create purchase request with at least one item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseRequestWriteRequest'
+      responses:
+        '201':
+          description: Purchase request created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseRequestResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /purchase-requests/{purchaseRequest}:
+    get:
+      tags: [Purchase Requests]
+      summary: Show purchase request
+      parameters:
+        - $ref: '#/components/parameters/PurchaseRequestId'
+      responses:
+        '200':
+          description: Purchase request details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseRequestResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    patch:
+      tags: [Purchase Requests]
+      summary: Update draft purchase request and replace items
+      parameters:
+        - $ref: '#/components/parameters/PurchaseRequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseRequestWriteRequest'
+      responses:
+        '200':
+          description: Purchase request updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseRequestResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [Purchase Requests]
+      summary: Delete purchase request
+      parameters:
+        - $ref: '#/components/parameters/PurchaseRequestId'
+      responses:
+        '204':
+          description: Purchase request deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /purchase-requests/{purchaseRequest}/submit:
+    post:
+      tags: [Purchase Requests]
+      summary: Submit draft purchase request
+      parameters:
+        - $ref: '#/components/parameters/PurchaseRequestId'
+      responses:
+        '200':
+          description: Purchase request submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseRequestResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /purchase-requests/{purchaseRequest}/quotes:
+    get:
+      tags: [Quotes]
+      summary: List quotes for purchase request
+      parameters:
+        - $ref: '#/components/parameters/PurchaseRequestId'
+      responses:
+        '200':
+          description: Quote collection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuoteCollection'
+    post:
+      tags: [Quotes]
+      summary: Create quote for submitted purchase request
+      parameters:
+        - $ref: '#/components/parameters/PurchaseRequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteWriteRequest'
+      responses:
+        '201':
+          description: Quote created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuoteResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /quotes/{quote}:
+    get:
+      tags: [Quotes]
+      summary: Show quote
+      parameters:
+        - $ref: '#/components/parameters/QuoteId'
+      responses:
+        '200':
+          description: Quote details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuoteResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    patch:
+      tags: [Quotes]
+      summary: Update quote and replace items
+      parameters:
+        - $ref: '#/components/parameters/QuoteId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteWriteRequest'
+      responses:
+        '200':
+          description: Quote updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuoteResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [Quotes]
+      summary: Delete quote
+      parameters:
+        - $ref: '#/components/parameters/QuoteId'
+      responses:
+        '204':
+          description: Quote deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /quotes/{quote}/analyze:
+    post:
+      tags: [AI Quote Analysis]
+      summary: Generate or regenerate deterministic quote analysis
+      parameters:
+        - $ref: '#/components/parameters/QuoteId'
+      responses:
+        '200':
+          description: Quote analysis generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuoteAnalysisResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /quotes/{quote}/analysis:
+    get:
+      tags: [AI Quote Analysis]
+      summary: Show generated quote analysis
+      parameters:
+        - $ref: '#/components/parameters/QuoteId'
+      responses:
+        '200':
+          description: Quote analysis
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuoteAnalysisResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /purchase-requests/{purchaseRequest}/comparison:
+    get:
+      tags: [Quote Comparison]
+      summary: Generate quote comparison and recommended quote
+      parameters:
+        - $ref: '#/components/parameters/PurchaseRequestId'
+      responses:
+        '200':
+          description: Quote comparison generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuoteComparisonResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /purchase-requests/{purchaseRequest}/send-for-approval:
+    post:
+      tags: [Approval Workflow]
+      summary: Send purchase request for approval
+      parameters:
+        - $ref: '#/components/parameters/PurchaseRequestId'
+      responses:
+        '201':
+          description: Approval steps created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ApprovalStep'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /approval-steps/{approvalStep}/approve:
+    post:
+      tags: [Approval Workflow]
+      summary: Approve an approval step
+      parameters:
+        - $ref: '#/components/parameters/ApprovalStepId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                comment:
+                  type: string
+                  nullable: true
+      responses:
+        '200':
+          description: Approval step approved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalStepResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /approval-steps/{approvalStep}/reject:
+    post:
+      tags: [Approval Workflow]
+      summary: Reject an approval step
+      parameters:
+        - $ref: '#/components/parameters/ApprovalStepId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [comment]
+              properties:
+                comment:
+                  type: string
+      responses:
+        '200':
+          description: Approval step rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalStepResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /invoices:
+    get:
+      tags: [Invoices]
+      summary: List organization invoices
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [unpaid, paid]
+        - $ref: '#/components/parameters/PerPageQuery'
+      responses:
+        '200':
+          description: Invoice collection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceCollection'
+    post:
+      tags: [Invoices]
+      summary: Create invoice and calculate VAT totals
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvoiceWriteRequest'
+      responses:
+        '201':
+          description: Invoice created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /invoices/{invoice}:
+    get:
+      tags: [Invoices]
+      summary: Show invoice
+      parameters:
+        - $ref: '#/components/parameters/InvoiceId'
+      responses:
+        '200':
+          description: Invoice details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    patch:
+      tags: [Invoices]
+      summary: Update unpaid invoice and recalculate totals
+      parameters:
+        - $ref: '#/components/parameters/InvoiceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvoiceUpdateRequest'
+      responses:
+        '200':
+          description: Invoice updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /invoices/{invoice}/mark-paid:
+    patch:
+      tags: [Invoices]
+      summary: Mark invoice as paid and purchase request as paid
+      parameters:
+        - $ref: '#/components/parameters/InvoiceId'
+      responses:
+        '200':
+          description: Invoice paid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /activity-logs:
+    get:
+      tags: [Activity Logs]
+      summary: List organization activity logs
+      parameters:
+        - name: event
+          in: query
+          schema:
+            type: string
+            example: purchase_request.created
+        - name: user_id
+          in: query
+          schema:
+            type: integer
+        - name: subject_type
+          in: query
+          schema:
+            type: string
+            example: App\Models\PurchaseRequest
+        - name: subject_id
+          in: query
+          schema:
+            type: integer
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+        - $ref: '#/components/parameters/PerPageQuery'
+      responses:
+        '200':
+          description: Activity log collection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityLogCollection'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /activity-logs/{activityLog}:
+    get:
+      tags: [Activity Logs]
+      summary: Show activity log entry
+      parameters:
+        - $ref: '#/components/parameters/ActivityLogId'
+      responses:
+        '200':
+          description: Activity log details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityLogResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Sanctum
+
+  parameters:
+    SearchQuery:
+      name: search
+      in: query
+      schema:
+        type: string
+    PerPageQuery:
+      name: per_page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 15
+    DepartmentId:
+      name: department
+      in: path
+      required: true
+      schema:
+        type: integer
+    VendorId:
+      name: vendor
+      in: path
+      required: true
+      schema:
+        type: integer
+    PurchaseRequestId:
+      name: purchaseRequest
+      in: path
+      required: true
+      schema:
+        type: integer
+    QuoteId:
+      name: quote
+      in: path
+      required: true
+      schema:
+        type: integer
+    ApprovalStepId:
+      name: approvalStep
+      in: path
+      required: true
+      schema:
+        type: integer
+    InvoiceId:
+      name: invoice
+      in: path
+      required: true
+      schema:
+        type: integer
+    ActivityLogId:
+      name: activityLog
+      in: path
+      required: true
+      schema:
+        type: integer
+
+  responses:
+    Unauthenticated:
+      description: Missing or invalid authentication token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            message: Unauthenticated.
+    Forbidden:
+      description: The authenticated user is not authorized to perform this action
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            message: This action is unauthorized.
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            message: Not Found
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationErrorResponse'
+
+  schemas:
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        organization_id:
+          type: integer
+        department_id:
+          type: integer
+          nullable: true
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [admin, requester, procurement, manager, finance, viewer]
+
+    Department:
+      type: object
+      properties:
+        id:
+          type: integer
+        organization_id:
+          type: integer
+        name:
+          type: string
+        code:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    DepartmentWriteRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          example: Engineering
+        code:
+          type: string
+          nullable: true
+          example: ENG
+        description:
+          type: string
+          nullable: true
+
+    DepartmentResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Department'
+
+    DepartmentCollection:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedCollection'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Department'
+
+    Vendor:
+      type: object
+      properties:
+        id:
+          type: integer
+        organization_id:
+          type: integer
+        name:
+          type: string
+        legal_name:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [active, inactive, blocked]
+        email:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        website:
+          type: string
+          nullable: true
+        country:
+          type: string
+          example: DE
+        city:
+          type: string
+          nullable: true
+        tax_number:
+          type: string
+          nullable: true
+        payment_terms:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        contacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/VendorContact'
+
+    VendorContact:
+      type: object
+      properties:
+        id:
+          type: integer
+        vendor_id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        position:
+          type: string
+          nullable: true
+
+    VendorWriteRequest:
+      type: object
+      required: [name, status]
+      properties:
+        name:
+          type: string
+          example: Berlin Office Supplies GmbH
+        legal_name:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [active, inactive, blocked]
+        email:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        website:
+          type: string
+          nullable: true
+        country:
+          type: string
+          example: DE
+        city:
+          type: string
+          nullable: true
+        tax_number:
+          type: string
+          nullable: true
+        payment_terms:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        contacts:
+          type: array
+          items:
+            type: object
+            required: [name]
+            properties:
+              name:
+                type: string
+              email:
+                type: string
+                nullable: true
+              phone:
+                type: string
+                nullable: true
+              position:
+                type: string
+                nullable: true
+
+    VendorResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Vendor'
+
+    VendorCollection:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedCollection'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Vendor'
+
+    PurchaseRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+        organization_id:
+          type: integer
+        department_id:
+          type: integer
+        requester_id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        needed_by_date:
+          type: string
+          format: date
+          nullable: true
+        estimated_budget:
+          type: number
+          format: float
+        currency:
+          type: string
+          example: EUR
+        priority:
+          type: string
+          enum: [low, normal, high, urgent]
+        status:
+          type: string
+          enum: [draft, submitted, received_quotes, pending_approval, approved, rejected, ordered, invoiced, paid]
+        approved_quote_id:
+          type: integer
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PurchaseRequestItem'
+
+    PurchaseRequestItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        purchase_request_id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        quantity:
+          type: number
+          format: float
+        expected_unit_price:
+          type: number
+          format: float
+          nullable: true
+        category:
+          type: string
+          nullable: true
+
+    PurchaseRequestWriteRequest:
+      type: object
+      required: [department_id, title, estimated_budget, currency, priority, items]
+      properties:
+        department_id:
+          type: integer
+        title:
+          type: string
+          example: CAD workstations
+        description:
+          type: string
+          nullable: true
+        needed_by_date:
+          type: string
+          format: date
+          nullable: true
+        estimated_budget:
+          type: number
+          format: float
+          example: 5000
+        currency:
+          type: string
+          example: EUR
+        priority:
+          type: string
+          enum: [low, normal, high, urgent]
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [name, quantity]
+            properties:
+              name:
+                type: string
+              description:
+                type: string
+                nullable: true
+              quantity:
+                type: number
+                format: float
+              expected_unit_price:
+                type: number
+                nullable: true
+              category:
+                type: string
+                nullable: true
+
+    PurchaseRequestResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PurchaseRequest'
+
+    PurchaseRequestCollection:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedCollection'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/PurchaseRequest'
+
+    Quote:
+      type: object
+      properties:
+        id:
+          type: integer
+        organization_id:
+          type: integer
+        purchase_request_id:
+          type: integer
+        vendor_id:
+          type: integer
+        status:
+          type: string
+          enum: [received, analyzed, accepted, rejected]
+        reference_number:
+          type: string
+          nullable: true
+        total_amount:
+          type: number
+          format: float
+        currency:
+          type: string
+          example: EUR
+        delivery_days:
+          type: integer
+          nullable: true
+        payment_terms:
+          type: string
+          nullable: true
+        warranty_months:
+          type: integer
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuoteItem'
+
+    QuoteItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        quote_id:
+          type: integer
+        name:
+          type: string
+        quantity:
+          type: number
+          format: float
+        unit_price:
+          type: number
+          format: float
+        total_price:
+          type: number
+          format: float
+
+    QuoteWriteRequest:
+      type: object
+      required: [vendor_id, total_amount, currency, items]
+      properties:
+        vendor_id:
+          type: integer
+        reference_number:
+          type: string
+          nullable: true
+        total_amount:
+          type: number
+          format: float
+        currency:
+          type: string
+          example: EUR
+        delivery_days:
+          type: integer
+          nullable: true
+        payment_terms:
+          type: string
+          nullable: true
+        warranty_months:
+          type: integer
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [name, quantity, unit_price]
+            properties:
+              name:
+                type: string
+              quantity:
+                type: number
+                format: float
+              unit_price:
+                type: number
+                format: float
+
+    QuoteResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Quote'
+
+    QuoteCollection:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Quote'
+
+    QuoteAnalysis:
+      type: object
+      properties:
+        id:
+          type: integer
+        quote_id:
+          type: integer
+        summary:
+          type: string
+        detected_risks:
+          type: array
+          items:
+            type: string
+        hidden_costs:
+          type: array
+          items:
+            type: string
+        payment_terms_score:
+          type: number
+        delivery_score:
+          type: number
+        warranty_score:
+          type: number
+        confidence_score:
+          type: number
+        model_name:
+          type: string
+
+    QuoteAnalysisResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/QuoteAnalysis'
+
+    QuoteComparison:
+      type: object
+      properties:
+        id:
+          type: integer
+        purchase_request_id:
+          type: integer
+        recommended_quote_id:
+          type: integer
+        currency:
+          type: string
+        recommendation_reason:
+          type: string
+        scoring_weights:
+          type: object
+        quotes:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+
+    QuoteComparisonResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/QuoteComparison'
+
+    ApprovalStep:
+      type: object
+      properties:
+        id:
+          type: integer
+        purchase_request_id:
+          type: integer
+        approver_id:
+          type: integer
+          nullable: true
+        approval_role:
+          type: string
+          enum: [manager, finance, admin]
+        sequence:
+          type: integer
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        comment:
+          type: string
+          nullable: true
+        approved_at:
+          type: string
+          format: date-time
+          nullable: true
+        rejected_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    ApprovalStepResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/ApprovalStep'
+
+    Invoice:
+      type: object
+      properties:
+        id:
+          type: integer
+        organization_id:
+          type: integer
+        purchase_request_id:
+          type: integer
+        vendor_id:
+          type: integer
+        invoice_number:
+          type: string
+        status:
+          type: string
+          enum: [unpaid, paid]
+        invoice_date:
+          type: string
+          format: date
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        subtotal:
+          type: number
+          format: float
+        vat_rate:
+          type: number
+          format: float
+        vat_amount:
+          type: number
+          format: float
+        total:
+          type: number
+          format: float
+        currency:
+          type: string
+        paid_at:
+          type: string
+          format: date-time
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+
+    InvoiceWriteRequest:
+      type: object
+      required: [purchase_request_id, vendor_id, invoice_number, invoice_date, subtotal, currency]
+      properties:
+        purchase_request_id:
+          type: integer
+        vendor_id:
+          type: integer
+        invoice_number:
+          type: string
+        invoice_date:
+          type: string
+          format: date
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        subtotal:
+          type: number
+          format: float
+        vat_rate:
+          type: number
+          format: float
+          nullable: true
+        currency:
+          type: string
+          example: EUR
+        notes:
+          type: string
+          nullable: true
+
+    InvoiceUpdateRequest:
+      type: object
+      properties:
+        invoice_number:
+          type: string
+        invoice_date:
+          type: string
+          format: date
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        subtotal:
+          type: number
+          format: float
+        vat_rate:
+          type: number
+          format: float
+        notes:
+          type: string
+          nullable: true
+
+    InvoiceResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Invoice'
+
+    InvoiceCollection:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedCollection'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Invoice'
+
+    VendorScorecard:
+      type: object
+      properties:
+        id:
+          type: integer
+        vendor_id:
+          type: integer
+        total_quotes:
+          type: integer
+        accepted_quotes:
+          type: integer
+        win_rate:
+          type: number
+        average_delivery_days:
+          type: number
+          nullable: true
+        total_invoices:
+          type: integer
+        paid_invoices:
+          type: integer
+        invoice_issue_count:
+          type: integer
+        total_invoiced_amount:
+          type: number
+        currency:
+          type: string
+        overall_score:
+          type: number
+        calculated_at:
+          type: string
+          format: date-time
+
+    VendorScorecardResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/VendorScorecard'
+
+    ActivityLog:
+      type: object
+      properties:
+        id:
+          type: integer
+        organization_id:
+          type: integer
+        user_id:
+          type: integer
+          nullable: true
+        event:
+          type: string
+          example: purchase_request.created
+        subject_type:
+          type: string
+          nullable: true
+          example: App\Models\PurchaseRequest
+        subject_id:
+          type: integer
+          nullable: true
+        metadata:
+          type: object
+          additionalProperties: true
+        user:
+          $ref: '#/components/schemas/User'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ActivityLogResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/ActivityLog'
+
+    ActivityLogCollection:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedCollection'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/ActivityLog'
+
+    PaginatedCollection:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+        links:
+          type: object
+          properties:
+            first:
+              type: string
+              nullable: true
+            last:
+              type: string
+              nullable: true
+            prev:
+              type: string
+              nullable: true
+            next:
+              type: string
+              nullable: true
+        meta:
+          type: object
+          properties:
+            current_page:
+              type: integer
+            from:
+              type: integer
+              nullable: true
+            last_page:
+              type: integer
+            path:
+              type: string
+            per_page:
+              type: integer
+            to:
+              type: integer
+              nullable: true
+            total:
+              type: integer
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+
+    ValidationErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
