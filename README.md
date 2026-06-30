@@ -6,7 +6,7 @@
 
 The project models a complete procurement workflow: employees create purchase requests, procurement teams collect supplier quotes, the system analyzes and compares offers, approval steps are generated based on budget thresholds, finance tracks invoices and VAT, and vendor performance is calculated through scorecards.
 
-> Current test status: **86 tests passed / 303 assertions**
+> Current test status: **96 tests passed / 341 assertions**
 
 ---
 
@@ -14,6 +14,7 @@ The project models a complete procurement workflow: employees create purchase re
 
 * [Problem](#problem)
 * [Solution](#solution)
+* [Production Readiness](#production-readiness)
 * [Core Features](#core-features)
 * [Architecture](#architecture)
 * [Tech Stack](#tech-stack)
@@ -69,6 +70,28 @@ The main workflow:
 9. Activity logs capture important business events.
 
 The goal is not just to build CRUD endpoints, but to demonstrate a realistic Laravel SaaS backend with maintainable architecture, strong authorization, automated tests, Dockerized development, CI, and an AI microservice integration.
+
+---
+
+## Production Readiness
+
+This repository includes production-oriented backend patterns that demonstrate maintainability, testability, and operational awareness:
+
+* Organization-level tenant isolation with dedicated feature tests.
+* Role-based authorization covered by policy-focused tests.
+* Invoice and billing workflow validation, including VAT and paid-invoice protection.
+* Health monitoring endpoint for application dependency checks.
+* Asynchronous queue processing for submitted purchase requests.
+* Reusable factories and test scenario builders for maintainable test setup.
+* Docker-based local environment with MySQL, Redis, Nginx, Mailpit, queue worker, and FastAPI sidecar.
+* GitHub Actions CI pipeline for automated test execution.
+* Architecture documentation for reviewers and technical interviewers.
+
+Latest Laravel test suite:
+
+```text
+Tests: 96 passed (341 assertions)
+```
 
 ---
 
@@ -206,6 +229,15 @@ Approval thresholds:
 * Supports user, event, subject, and metadata tracking.
 * Filterable API for procurement, finance, and admin users.
 
+
+### Health Monitoring
+
+* Public health endpoint under `/api/v1/health`.
+* Checks database connectivity.
+* Checks cache read/write behavior.
+* Reports queue configuration status.
+* Designed for deployment readiness and basic uptime monitoring.
+
 ---
 
 ## Architecture
@@ -220,8 +252,10 @@ app/
 │   └── Resources/Api/V1/     # Consistent JSON API responses
 ├── Models/                   # Eloquent models, relationships, casts, constants
 ├── Policies/                 # Authorization and tenant isolation rules
+├── Jobs/                     # Asynchronous queue jobs
 └── Services/
     ├── AI/                   # Quote analysis and AI client integration
+    ├── Monitoring/           # Health checks and operational monitoring
     ├── Procurement/          # Procurement business workflows
     └── Support/              # Shared supporting services, including attachments
 ```
@@ -253,7 +287,9 @@ Architectural principles:
 * Authorization is enforced through Policies.
 * Complex writes are wrapped in database transactions.
 * Organization scope is derived from the authenticated user.
-* Feature tests cover business rules, permissions, and cross-tenant isolation.
+* Feature tests cover business rules, permissions, billing, health checks, and cross-tenant isolation.
+* Queue jobs are used for asynchronous operational side effects.
+* Health checks expose dependency status for deployment readiness.
 * AI analysis is isolated behind a Laravel client/service boundary.
 * The Laravel API remains the system of record.
 
@@ -426,6 +462,12 @@ Base prefix:
 /api/v1
 ```
 
+### Health
+
+```http
+GET /api/v1/health
+```
+
 ### Auth
 
 ```http
@@ -582,7 +624,7 @@ Security design:
 Current Laravel test result:
 
 ```text
-Tests: 86 passed (303 assertions)
+Tests: 96 passed (341 assertions)
 ```
 
 Current FastAPI test result:
@@ -607,7 +649,9 @@ Covered Laravel areas:
 * authorization rules,
 * cross-organization isolation,
 * validation errors,
-* attachment upload, listing, metadata viewing, deletion, authorization, and file validation.
+* attachment upload, listing, metadata viewing, deletion, authorization, and file validation,
+* health monitoring endpoint,
+* production-readiness tests for tenant isolation, authorization policies, and invoice/billing workflows.
 
 Run Laravel tests locally:
 
@@ -711,6 +755,7 @@ The project includes a Docker-based local development environment with:
 * MySQL 8.4
 * Redis
 * Mailpit
+* Queue worker
 * FastAPI AI service
 
 ### Start the containers
@@ -725,7 +770,8 @@ docker compose up -d --build
 | ------------------- | ----------------------- | --------------------------- |
 | Laravel API / Nginx | `http://localhost:8000` | Main API entrypoint         |
 | MySQL               | `localhost:3308`        | Database                    |
-| Redis               | `localhost:6380`        | Cache / queue-ready service |
+| Redis               | `localhost:6380`        | Cache and queue backend     |
+| Queue Worker        | internal service        | Async Laravel queue worker  |
 | Mailpit             | `http://localhost:8026` | Local email testing         |
 | FastAPI AI Service  | `http://localhost:8001` | Quote analysis microservice |
 
@@ -820,6 +866,11 @@ Completed:
 * OpenAPI documentation
 * Postman collection
 * Feature test coverage
+* Production-readiness tests
+* Health monitoring endpoint
+* Reusable test scenario builders
+* Redis queue job for submitted purchase requests
+* Architecture documentation
 
 Remaining / planned:
 
@@ -847,7 +898,7 @@ Remaining / planned:
 
 ### Portfolio Milestone
 
-* Add architecture diagram.
+* Add additional screenshots and diagrams for portfolio presentation.
 * Add screenshots of API results, test results, Docker containers, and CI.
 * Add a concise demo script for recruiters and technical reviewers.
 
@@ -870,6 +921,7 @@ It demonstrates:
 * FastAPI microservice integration,
 * Dockerized development,
 * automated CI,
+* health monitoring and queue processing,
 * test-driven confidence for business rules,
 * auditability through activity logs.
 
