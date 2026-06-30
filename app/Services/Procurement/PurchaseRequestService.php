@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\ActivityLog;
 use App\Services\Support\ActivityLogService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use App\Jobs\Procurement\RecordPurchaseRequestSubmitted;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -89,37 +90,32 @@ class PurchaseRequestService
     }
 
     public function submit(PurchaseRequest $purchaseRequest, User $user): PurchaseRequest
-    {
-        return DB::transaction(function () use ($purchaseRequest, $user): PurchaseRequest {
-            if ($purchaseRequest->status !== PurchaseRequest::STATUS_DRAFT) {
-                throw ValidationException::withMessages([
-                    'status' => ['Only draft purchase requests can be submitted.'],
-                ]);
-            }
-
-            if ($purchaseRequest->items()->count() < 1) {
-                throw ValidationException::withMessages([
-                    'items' => ['A purchase request must have at least one item before submission.'],
-                ]);
-            }
-
-            $purchaseRequest->update([
-                'status' => PurchaseRequest::STATUS_SUBMITTED,
+{
+    return DB::transaction(function () use ($purchaseRequest, $user): PurchaseRequest {
+        if ($purchaseRequest->status !== PurchaseRequest::STATUS_DRAFT) {
+            throw ValidationException::withMessages([
+                'status' => ['Only draft purchase requests can be submitted.'],
             ]);
+        }
 
-            $this->activityLogService->log(
-                event: ActivityLog::EVENT_PURCHASE_REQUEST_SUBMITTED,
-                user: $user,
-                subject: $purchaseRequest,
-                metadata: [
-                    'status' => PurchaseRequest::STATUS_SUBMITTED,
-                    'submitted_at' => now()->toISOString(),
-                ]
-            );
+        if ($purchaseRequest->items()->count() < 1) {
+            throw ValidationException::withMessages([
+                'items' => ['A purchase request must have at least one item before submission.'],
+            ]);
+        }
 
-            return $purchaseRequest->fresh(['department', 'requester', 'items']);
-        });
-    }
+        $purchaseRequest->update([
+            'status' => PurchaseRequest::STATUS_SUBMITTED,
+        ]);
+
+        RecordPurchaseRequestSubmitted::dispatch(
+            purchaseRequestId: $purchaseRequest->id,
+            submittedByUserId: $user->id,
+        )->afterCommit();
+
+        return $purchaseRequest->fresh(['department', 'requester', 'items']);
+    });
+}
 
     public function delete(PurchaseRequest $purchaseRequest): void
     {
