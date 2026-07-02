@@ -105,7 +105,7 @@ Latest Laravel quality check:
 ```text
 Laravel Pint: PASS
 PHPStan/Larastan: No errors
-Tests: 97 passed (359 assertions)
+Tests: 101 passed (367 assertions)
 ```
 
 ---
@@ -645,7 +645,7 @@ Current Laravel quality result:
 ```text
 Laravel Pint: PASS
 PHPStan/Larastan: No errors
-Tests: 97 passed (359 assertions)
+Tests: 101 passed (367 assertions)
 ```
 
 Current FastAPI test result:

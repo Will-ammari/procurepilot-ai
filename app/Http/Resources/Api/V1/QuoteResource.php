@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Api\V1;
 
 use App\Models\Quote;
+use App\Support\ApiDate;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -23,7 +24,7 @@ class QuoteResource extends JsonResource
             'delivery_days' => $this->delivery_days,
             'payment_terms' => $this->payment_terms,
             'warranty_months' => $this->warranty_months,
-            'valid_until' => $this->valid_until?->toDateString(),
+            'valid_until' => ApiDate::date($this->valid_until),
             'notes' => $this->notes,
             'status' => $this->status,
 
@@ -32,8 +33,8 @@ class QuoteResource extends JsonResource
             'items' => QuoteItemResource::collection($this->whenLoaded('items')),
             'analysis' => new QuoteAnalysisResource($this->whenLoaded('analysis')),
 
-            'created_at' => $this->created_at?->toISOString(),
-            'updated_at' => $this->updated_at?->toISOString(),
+            'created_at' => ApiDate::datetime($this->created_at),
+            'updated_at' => ApiDate::datetime($this->updated_at),
         ];
     }
 }
