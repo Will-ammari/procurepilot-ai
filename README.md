@@ -6,9 +6,20 @@
 
 The project models a complete procurement workflow: employees create purchase requests, procurement teams collect supplier quotes, the system analyzes and compares offers, approval steps are generated based on budget thresholds, finance tracks invoices and VAT, and vendor performance is calculated through scorecards.
 
-> Current test status: **96 tests passed / 341 assertions**
+> Current quality status: **Laravel Pint passing / PHPStan no errors / 97 tests passed / 359 assertions**
 
 ---
+
+## Hiring Signal
+
+| Area | What this project proves |
+| --- | --- |
+| Backend architecture | API-first Laravel backend with thin controllers, Form Requests, Resources, Services, Policies, and queued Jobs. |
+| SaaS readiness | Organization-level tenant isolation, role-based authorization, request-derived ownership, and cross-tenant protection. |
+| Production operations | Health endpoint with database, cache, Redis, and queue checks; request IDs; standardized API errors; Docker queue worker. |
+| Quality pipeline | PHPUnit feature tests, Laravel Pint code style checks, Larastan/PHPStan static analysis, and GitHub Actions CI. |
+| Business workflows | Procurement requests, supplier quotes, quote comparison, approvals, invoices, VAT, vendor scorecards, and audit logs. |
+| Maintainability | Service-layer business logic, reusable factories/test scenarios, documented architecture, and deterministic test behavior. |
 
 ## Table of Contents
 
@@ -80,17 +91,21 @@ This repository includes production-oriented backend patterns that demonstrate m
 * Organization-level tenant isolation with dedicated feature tests.
 * Role-based authorization covered by policy-focused tests.
 * Invoice and billing workflow validation, including VAT and paid-invoice protection.
-* Health monitoring endpoint for application dependency checks.
 * Asynchronous queue processing for submitted purchase requests.
 * Reusable factories and test scenario builders for maintainable test setup.
 * Docker-based local environment with MySQL, Redis, Nginx, Mailpit, queue worker, and FastAPI sidecar.
-* GitHub Actions CI pipeline for automated test execution.
+* GitHub Actions CI pipeline for code style, static analysis, and automated test execution.
 * Architecture documentation for reviewers and technical interviewers.
+* Health monitoring endpoint for database, cache, Redis, and queue dependency checks.
+* Request ID propagation through `X-Request-Id` for easier debugging and log correlation.
+* Standardized JSON API error responses for validation, authentication, authorization, not found, rate limit, and server errors.
 
-Latest Laravel test suite:
+Latest Laravel quality check:
 
 ```text
-Tests: 96 passed (341 assertions)
+Laravel Pint: PASS
+PHPStan/Larastan: No errors
+Tests: 97 passed (359 assertions)
 ```
 
 ---
@@ -235,7 +250,9 @@ Approval thresholds:
 * Public health endpoint under `/api/v1/health`.
 * Checks database connectivity.
 * Checks cache read/write behavior.
+* Checks Redis connectivity when Redis is required by cache or queue configuration.
 * Reports queue configuration status.
+* Returns latency per dependency check.
 * Designed for deployment readiness and basic uptime monitoring.
 
 ---
@@ -323,6 +340,8 @@ Architectural principles:
 * Nginx
 * Mailpit
 * GitHub Actions CI
+* Laravel Pint
+* Larastan / PHPStan
 * OpenAPI documentation
 * Postman collection
 
@@ -621,10 +640,12 @@ Security design:
 
 ## Testing
 
-Current Laravel test result:
+Current Laravel quality result:
 
 ```text
-Tests: 96 passed (341 assertions)
+Laravel Pint: PASS
+PHPStan/Larastan: No errors
+Tests: 97 passed (359 assertions)
 ```
 
 Current FastAPI test result:
@@ -653,7 +674,13 @@ Covered Laravel areas:
 * health monitoring endpoint,
 * production-readiness tests for tenant isolation, authorization policies, and invoice/billing workflows.
 
-Run Laravel tests locally:
+Run the full Laravel quality pipeline:
+
+```bash
+composer quality
+```
+
+Run Laravel tests only:
 
 ```bash
 php artisan test
@@ -688,6 +715,7 @@ pytest
 Useful verification commands:
 
 ```bash
+composer quality
 php artisan migrate:status
 php artisan route:list
 php artisan test
@@ -862,7 +890,9 @@ Completed:
 * Activity logs API
 * Attachments and file uploads
 * Docker development setup
-* GitHub Actions CI
+* GitHub Actions CI quality pipeline
+* Laravel Pint code style checks
+* Larastan/PHPStan static analysis with no errors
 * OpenAPI documentation
 * Postman collection
 * Feature test coverage
@@ -927,12 +957,5 @@ It demonstrates:
 
 The project is intentionally focused on backend depth rather than frontend UI. It is suitable for showcasing Laravel, SaaS architecture, clean code, API design, DevOps basics, and business workflow engineering.
 
----
-
-## License
-
-This project is publicly available for portfolio review purposes only.
-
-No open-source license is granted. You may view the source code for evaluation and learning purposes, but you may not copy, redistribute, sublicense, sell, or use this project or substantial portions of it in another product without explicit written permission from the author.
 
 Copyright © 2026 William Ammari. All rights reserved.

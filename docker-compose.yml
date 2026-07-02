@@ -14,21 +14,21 @@ services:
     networks:
       - procurepilot
 
-  queue:
-    build:
+    queue:
+      build:
       context: .
       dockerfile: Dockerfile
-    container_name: procurepilot_queue
-    restart: unless-stopped
-    working_dir: /var/www/html
-    command: php artisan queue:work redis --queue=default --sleep=3 --tries=3 --timeout=90
-    volumes:
+      container_name: procurepilot_queue
+      restart: unless-stopped
+      working_dir: /var/www/html
+      command: php artisan queue:work redis --queue=procurement-events,default --sleep=3 --tries=3 --timeout=90 --backoff=10
+      volumes:
       - ./:/var/www/html
-    depends_on:
+      depends_on:
       - app
       - db
       - redis
-    networks:
+      networks:
       - procurepilot
 
   nginx:

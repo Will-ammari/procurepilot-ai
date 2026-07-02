@@ -12,14 +12,23 @@ class ActivityLog extends Model
     use HasFactory;
 
     public const EVENT_PURCHASE_REQUEST_CREATED = 'purchase_request.created';
+
     public const EVENT_PURCHASE_REQUEST_SUBMITTED = 'purchase_request.submitted';
+
     public const EVENT_QUOTE_CREATED = 'quote.created';
+
     public const EVENT_QUOTE_ANALYSIS_COMPLETED = 'quote.analysis_completed';
+
     public const EVENT_COMPARISON_GENERATED = 'comparison.generated';
+
     public const EVENT_APPROVAL_APPROVED = 'approval.approved';
+
     public const EVENT_APPROVAL_REJECTED = 'approval.rejected';
+
     public const EVENT_INVOICE_RECEIVED = 'invoice.received';
+
     public const EVENT_INVOICE_PAID = 'invoice.paid';
+
     public const EVENT_VENDOR_SCORECARD_CALCULATED = 'vendor_scorecard.calculated';
 
     protected $fillable = [

@@ -2,11 +2,11 @@
 
 namespace App\Services\Procurement;
 
+use App\Models\ActivityLog;
 use App\Models\PurchaseRequest;
 use App\Models\Quote;
 use App\Models\QuoteComparison;
 use App\Models\User;
-use App\Models\ActivityLog;
 use App\Services\Support\ActivityLogService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -14,10 +14,10 @@ use Illuminate\Validation\ValidationException;
 
 class QuoteComparisonService
 {
-
     public function __construct(
         private readonly ActivityLogService $activityLogService
     ) {}
+
     private const WEIGHTS = [
         'total_amount' => 35,
         'delivery_days' => 20,
@@ -88,17 +88,17 @@ class QuoteComparisonService
 
     private function scoreQuotes(Collection $quotes): Collection
     {
-        $amounts = $quotes->pluck('total_amount')->map(fn($value): float => (float) $value);
-        $deliveries = $quotes->pluck('delivery_days')->filter()->map(fn($value): int => (int) $value);
-        $warranties = $quotes->pluck('warranty_months')->filter()->map(fn($value): int => (int) $value);
+        $amounts = $quotes->pluck('total_amount')->map(fn ($value): float => (float) $value);
+        $deliveries = $quotes->pluck('delivery_days')->filter()->map(fn ($value): int => (int) $value);
+        $warranties = $quotes->pluck('warranty_months')->filter()->map(fn ($value): int => (int) $value);
 
         $minAmount = max(0.01, $amounts->min());
         $minDelivery = max(1, $deliveries->min() ?? 1);
         $maxWarranty = max(1, $warranties->max() ?? 1);
 
         return $quotes->map(function (Quote $quote) use ($minAmount, $minDelivery, $maxWarranty): array {
-            $hiddenCosts = $quote->analysis?->hidden_costs ?? [];
-            $riskNotes = $quote->analysis?->risk_notes ?? [];
+            $hiddenCosts = $quote->analysis->hidden_costs ?? [];
+            $riskNotes = $quote->analysis->risk_notes ?? [];
 
             $breakdown = [
                 'total_amount' => $this->weightedScore(
@@ -223,7 +223,7 @@ class QuoteComparisonService
             $parts[] = 'commercial terms require review';
         }
 
-        return implode('; ', $parts) . '.';
+        return implode('; ', $parts).'.';
     }
 
     private function buildReason(?array $recommended, Collection $scoredQuotes): string

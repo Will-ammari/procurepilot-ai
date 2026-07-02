@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\Department;
+use App\Models\Organization;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -24,6 +27,11 @@ class AuthController extends Controller
         }
 
         $user = $request->user();
+
+        if (! $user instanceof User) {
+            abort(401);
+        }
+
         $token = $user->createToken('api-token')->plainTextToken;
 
         return response()->json([
@@ -44,23 +52,39 @@ class AuthController extends Controller
 
     public function me(Request $request): JsonResponse
     {
-        $user = $request->user()->load(['organization', 'department']);
+        $user = $request->user();
+
+        if (! $user instanceof User) {
+            abort(401);
+        }
+
+        $user->load(['organization', 'department']);
+        $organization = $user->organization;
+        $department = $user->department;
+
+        if (! $organization instanceof Organization) {
+            abort(500, 'Authenticated user is missing an organization.');
+        }
+
+        if ($department !== null && ! $department instanceof Department) {
+            abort(500, 'Authenticated user has an invalid department relation.');
+        }
 
         return response()->json([
             'data' => [
                 'id' => $user->id,
                 'organization' => [
-                    'id' => $user->organization?->id,
-                    'name' => $user->organization?->name,
-                    'country' => $user->organization?->country,
-                    'currency' => $user->organization?->currency,
-                    'vat_rate' => $user->organization?->vat_rate,
+                    'id' => $organization->id,
+                    'name' => $organization->name,
+                    'country' => $organization->country,
+                    'currency' => $organization->currency,
+                    'vat_rate' => $organization->vat_rate,
                 ],
-                'department' => [
-                    'id' => $user->department?->id,
-                    'name' => $user->department?->name,
-                    'code' => $user->department?->code,
-                ],
+                'department' => $department instanceof Department ? [
+                    'id' => $department->id,
+                    'name' => $department->name,
+                    'code' => $department->code,
+                ] : null,
                 'name' => $user->name,
                 'email' => $user->email,
                 'role' => $user->role,
@@ -70,7 +94,13 @@ class AuthController extends Controller
 
     public function logout(Request $request): JsonResponse
     {
-        $request->user()->currentAccessToken()->delete();
+        $user = $request->user();
+
+        if (! $user instanceof User) {
+            abort(401);
+        }
+
+        $user->currentAccessToken()->delete();
 
         return response()->json([
             'message' => 'Logged out successfully.',

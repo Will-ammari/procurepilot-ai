@@ -21,8 +21,7 @@ class AttachmentController extends Controller
 {
     public function __construct(
         private readonly AttachmentService $attachmentService
-    ) {
-    }
+    ) {}
 
     public function index(IndexAttachmentRequest $request): AnonymousResourceCollection
     {

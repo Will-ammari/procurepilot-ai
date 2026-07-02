@@ -207,8 +207,8 @@ class VendorApiTest extends TestCase
     {
         return User::create([
             'organization_id' => $organization->id,
-            'name' => ucfirst($role) . ' User',
-            'email' => "{$role}." . $organization->id . '@procurepilot.test',
+            'name' => ucfirst($role).' User',
+            'email' => "{$role}.".$organization->id.'@procurepilot.test',
             'password' => 'password',
             'role' => $role,
         ]);

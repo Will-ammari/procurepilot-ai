@@ -2,25 +2,26 @@
 
 namespace App\Services\Procurement;
 
+use App\Models\ActivityLog;
 use App\Models\PurchaseRequest;
 use App\Models\Quote;
 use App\Models\User;
 use App\Models\Vendor;
+use App\Services\Support\ActivityLogService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Arr;
-use App\Models\ActivityLog;
-use App\Services\Support\ActivityLogService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class QuoteService
 {
-
     public function __construct(
         private readonly ActivityLogService $activityLogService
     ) {}
+
     private const DEFAULT_PER_PAGE = 15;
+
     private const MAX_PER_PAGE = 100;
 
     public function paginatedForPurchaseRequest(

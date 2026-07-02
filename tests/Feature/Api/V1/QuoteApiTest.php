@@ -312,8 +312,8 @@ class QuoteApiTest extends TestCase
         return User::create([
             'organization_id' => $organization->id,
             'department_id' => $department?->id,
-            'name' => ucfirst($role) . ' User',
-            'email' => $role . uniqid('', true) . '@procurepilot.test',
+            'name' => ucfirst($role).' User',
+            'email' => $role.uniqid('', true).'@procurepilot.test',
             'password' => Hash::make('password'),
             'role' => $role,
         ]);
@@ -325,7 +325,7 @@ class QuoteApiTest extends TestCase
     ): Vendor {
         return Vendor::create([
             'organization_id' => $organization->id,
-            'name' => 'Vendor ' . uniqid('', true),
+            'name' => 'Vendor '.uniqid('', true),
             'legal_name' => 'Vendor GmbH',
             'country' => 'DE',
             'default_currency' => 'EUR',

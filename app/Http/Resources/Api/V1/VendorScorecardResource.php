@@ -2,9 +2,14 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Models\VendorScorecard;
+use App\Support\ApiDate;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * @mixin VendorScorecard
+ */
 class VendorScorecardResource extends JsonResource
 {
     public function toArray(Request $request): array
@@ -30,7 +35,7 @@ class VendorScorecardResource extends JsonResource
             'currency' => $this->currency,
 
             'overall_score' => (float) $this->overall_score,
-            'calculated_at' => $this->calculated_at?->toISOString(),
+            'calculated_at' => ApiDate::datetime($this->calculated_at),
 
             'vendor' => new VendorResource($this->whenLoaded('vendor')),
 

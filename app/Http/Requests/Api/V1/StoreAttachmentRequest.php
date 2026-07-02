@@ -19,7 +19,7 @@ class StoreAttachmentRequest extends FormRequest
             'file' => [
                 'required',
                 'file',
-                'max:' . self::MAX_FILE_SIZE_KB,
+                'max:'.self::MAX_FILE_SIZE_KB,
                 'mimes:pdf,png,jpg,jpeg,webp,doc,docx,xls,xlsx,txt,csv',
             ],
         ];

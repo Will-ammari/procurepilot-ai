@@ -158,8 +158,8 @@ class QuoteComparisonApiTest extends TestCase
         return User::create([
             'organization_id' => $organization->id,
             'department_id' => $department?->id,
-            'name' => ucfirst($role) . ' User',
-            'email' => $role . uniqid('', true) . '@procurepilot.test',
+            'name' => ucfirst($role).' User',
+            'email' => $role.uniqid('', true).'@procurepilot.test',
             'password' => Hash::make('password'),
             'role' => $role,
         ]);

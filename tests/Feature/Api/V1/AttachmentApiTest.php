@@ -284,8 +284,8 @@ class AttachmentApiTest extends TestCase
         return User::create([
             'organization_id' => $organization->id,
             'department_id' => $department?->id,
-            'name' => ucfirst($role) . ' User',
-            'email' => $role . uniqid('', true) . '@procurepilot.test',
+            'name' => ucfirst($role).' User',
+            'email' => $role.uniqid('', true).'@procurepilot.test',
             'password' => Hash::make('password'),
             'role' => $role,
         ]);
@@ -354,7 +354,7 @@ class AttachmentApiTest extends TestCase
             'organization_id' => $organization->id,
             'purchase_request_id' => $purchaseRequest->id,
             'vendor_id' => $vendor->id,
-            'invoice_number' => 'INV-' . uniqid(),
+            'invoice_number' => 'INV-'.uniqid(),
             'invoice_date' => now()->toDateString(),
             'due_date' => now()->addMonth()->toDateString(),
             'subtotal' => 1000,
@@ -374,7 +374,7 @@ class AttachmentApiTest extends TestCase
     ): Attachment {
         $path = UploadedFile::fake()
             ->create('document.pdf', 128, 'application/pdf')
-            ->store('attachments/purchase-request/' . $purchaseRequest->id, 'public');
+            ->store('attachments/purchase-request/'.$purchaseRequest->id, 'public');
 
         return Attachment::create([
             'organization_id' => $organization->id,

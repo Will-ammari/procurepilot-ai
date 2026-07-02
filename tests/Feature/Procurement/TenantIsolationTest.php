@@ -16,7 +16,7 @@ class TenantIsolationTest extends TestCase
 
     public function test_users_cannot_view_purchase_requests_from_another_organization(): void
     {
-        $scenario = new ProcurementTestScenario();
+        $scenario = new ProcurementTestScenario;
         $purchaseRequest = $scenario->purchaseRequest();
 
         $otherOrganization = Organization::factory()->create(['name' => 'Other GmbH']);
@@ -37,7 +37,7 @@ class TenantIsolationTest extends TestCase
 
     public function test_purchase_request_index_is_scoped_to_authenticated_users_organization(): void
     {
-        $scenario = new ProcurementTestScenario();
+        $scenario = new ProcurementTestScenario;
 
         $ownPurchaseRequest = $scenario->purchaseRequest([
             'title' => 'Visible request',
@@ -70,7 +70,7 @@ class TenantIsolationTest extends TestCase
 
     public function test_request_bodies_cannot_assign_resources_to_another_tenant(): void
     {
-        $scenario = new ProcurementTestScenario();
+        $scenario = new ProcurementTestScenario;
 
         $otherOrganization = Organization::factory()->create();
         $otherDepartment = Department::factory()->create([

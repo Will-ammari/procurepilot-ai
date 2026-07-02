@@ -12,8 +12,7 @@ class QuoteComparisonController extends Controller
 {
     public function __construct(
         private readonly QuoteComparisonService $quoteComparisonService
-    ) {
-    }
+    ) {}
 
     public function show(PurchaseRequest $purchaseRequest): JsonResponse
     {

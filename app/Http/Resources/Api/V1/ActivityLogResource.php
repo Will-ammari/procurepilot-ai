@@ -2,13 +2,25 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Models\ActivityLog;
+use App\Models\User;
+use App\Support\ApiDate;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * @mixin ActivityLog
+ */
 class ActivityLogResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $user = $this->whenLoaded('user');
+
+        if (! $user instanceof User) {
+            $user = null;
+        }
+
         return [
             'id' => $this->id,
             'organization_id' => $this->organization_id,
@@ -18,21 +30,15 @@ class ActivityLogResource extends JsonResource
             'subject_id' => $this->subject_id,
             'metadata' => $this->metadata ?? [],
 
-            'user' => $this->whenLoaded('user', function (): ?array {
-                if ($this->user === null) {
-                    return null;
-                }
+            'user' => $user instanceof User ? [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+            ] : null,
 
-                return [
-                    'id' => $this->user->id,
-                    'name' => $this->user->name,
-                    'email' => $this->user->email,
-                    'role' => $this->user->role,
-                ];
-            }),
-
-            'created_at' => $this->created_at?->toISOString(),
-            'updated_at' => $this->updated_at?->toISOString(),
+            'created_at' => ApiDate::datetime($this->created_at),
+            'updated_at' => ApiDate::datetime($this->updated_at),
         ];
     }
 }

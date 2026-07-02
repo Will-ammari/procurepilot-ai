@@ -14,7 +14,7 @@ class QuoteAnalysisClient
         $response = Http::timeout($timeout)
             ->acceptJson()
             ->asJson()
-            ->post($baseUrl . '/analyze-quote', $payload);
+            ->post($baseUrl.'/analyze-quote', $payload);
 
         $response->throw();
 

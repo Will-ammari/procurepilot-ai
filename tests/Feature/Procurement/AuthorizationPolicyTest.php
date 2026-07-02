@@ -18,7 +18,7 @@ class AuthorizationPolicyTest extends TestCase
     {
         Bus::fake();
 
-        $scenario = new ProcurementTestScenario();
+        $scenario = new ProcurementTestScenario;
         $purchaseRequest = $scenario->purchaseRequest();
 
         $this->actingAs($scenario->requester)
@@ -36,7 +36,7 @@ class AuthorizationPolicyTest extends TestCase
 
     public function test_requester_cannot_update_submitted_purchase_request(): void
     {
-        $scenario = new ProcurementTestScenario();
+        $scenario = new ProcurementTestScenario;
 
         $purchaseRequest = $scenario->purchaseRequest([
             'status' => PurchaseRequest::STATUS_SUBMITTED,
@@ -51,7 +51,7 @@ class AuthorizationPolicyTest extends TestCase
 
     public function test_viewer_can_read_but_cannot_create_purchase_requests(): void
     {
-        $scenario = new ProcurementTestScenario();
+        $scenario = new ProcurementTestScenario;
 
         $viewer = User::factory()->create([
             'organization_id' => $scenario->organization->id,
@@ -76,4 +76,4 @@ class AuthorizationPolicyTest extends TestCase
             ])
             ->assertForbidden();
     }
-}   
+}

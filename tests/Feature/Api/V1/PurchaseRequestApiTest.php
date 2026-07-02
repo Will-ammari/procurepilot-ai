@@ -2,12 +2,14 @@
 
 namespace Tests\Feature\Api\V1;
 
+use App\Jobs\Procurement\RecordPurchaseRequestSubmitted;
 use App\Models\Department;
 use App\Models\Organization;
 use App\Models\PurchaseRequest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Queue;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -326,8 +328,8 @@ class PurchaseRequestApiTest extends TestCase
         return User::create([
             'organization_id' => $organization->id,
             'department_id' => $department?->id,
-            'name' => ucfirst($role) . ' User',
-            'email' => $role . uniqid('', true) . '@procurepilot.test',
+            'name' => ucfirst($role).' User',
+            'email' => $role.uniqid('', true).'@procurepilot.test',
             'password' => Hash::make('password'),
             'role' => $role,
         ]);
@@ -365,5 +367,55 @@ class PurchaseRequestApiTest extends TestCase
             'expected_unit_price' => 1500,
             'category' => 'IT equipment',
         ]);
+    }
+
+    public function test_submit_dispatches_activity_log_job_after_commit(): void
+    {
+        Queue::fake();
+
+        $organization = $this->createOrganization();
+        $department = $this->createDepartment($organization);
+        $requester = $this->createUser($organization, User::ROLE_REQUESTER, $department);
+        $purchaseRequest = $this->createPurchaseRequest($organization, $department, $requester);
+        $this->createPurchaseRequestItem($purchaseRequest);
+
+        Sanctum::actingAs($requester);
+
+        $this->postJson("/api/v1/purchase-requests/{$purchaseRequest->id}/submit")
+            ->assertOk()
+            ->assertJsonPath('data.status', PurchaseRequest::STATUS_SUBMITTED);
+
+        Queue::assertPushedOn(
+            'procurement-events',
+            RecordPurchaseRequestSubmitted::class,
+            function (RecordPurchaseRequestSubmitted $job) use ($purchaseRequest, $requester): bool {
+                return $job->purchaseRequestId === $purchaseRequest->id
+                    && $job->submittedByUserId === $requester->id;
+            }
+        );
+    }
+
+    public function test_api_validation_error_uses_standard_error_contract(): void
+    {
+        $organization = $this->createOrganization();
+        $department = $this->createDepartment($organization);
+        $requester = $this->createUser($organization, User::ROLE_REQUESTER, $department);
+
+        Sanctum::actingAs($requester);
+
+        $response = $this
+            ->withHeader('X-Request-Id', 'test-request-id')
+            ->postJson('/api/v1/purchase-requests', [
+                'department_id' => $department->id,
+                'title' => '',
+                'items' => [],
+            ]);
+
+        $response
+            ->assertUnprocessable()
+            ->assertHeader('X-Request-Id', 'test-request-id')
+            ->assertJsonPath('error.code', 'validation_failed')
+            ->assertJsonPath('error.request_id', 'test-request-id')
+            ->assertJsonValidationErrors(['title', 'items']);
     }
 }

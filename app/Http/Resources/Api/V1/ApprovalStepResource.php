@@ -2,9 +2,14 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Models\ApprovalStep;
+use App\Support\ApiDate;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * @mixin ApprovalStep
+ */
 class ApprovalStepResource extends JsonResource
 {
     public function toArray(Request $request): array
@@ -19,7 +24,7 @@ class ApprovalStepResource extends JsonResource
             'decided_by_user_id' => $this->decided_by_user_id,
             'status' => $this->status,
             'decision_comment' => $this->decision_comment,
-            'decided_at' => $this->decided_at?->toISOString(),
+            'decided_at' => ApiDate::datetime($this->decided_at),
 
             'approver' => new UserResource($this->whenLoaded('approver')),
             'decided_by' => new UserResource($this->whenLoaded('decidedBy')),

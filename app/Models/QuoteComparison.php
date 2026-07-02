@@ -26,21 +26,33 @@ class QuoteComparison extends Model
         'weights' => 'array',
     ];
 
+    /**
+     * @return BelongsTo<Organization, $this>
+     */
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
     }
 
+    /**
+     * @return BelongsTo<PurchaseRequest, $this>
+     */
     public function purchaseRequest(): BelongsTo
     {
         return $this->belongsTo(PurchaseRequest::class);
     }
 
+    /**
+     * @return BelongsTo<Quote, $this>
+     */
     public function recommendedQuote(): BelongsTo
     {
         return $this->belongsTo(Quote::class, 'recommended_quote_id');
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function generatedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'generated_by_user_id');

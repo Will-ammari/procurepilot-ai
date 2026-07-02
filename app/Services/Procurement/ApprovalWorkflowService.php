@@ -2,11 +2,11 @@
 
 namespace App\Services\Procurement;
 
+use App\Models\ActivityLog;
 use App\Models\ApprovalStep;
 use App\Models\PurchaseRequest;
 use App\Models\QuoteComparison;
 use App\Models\User;
-use App\Models\ActivityLog;
 use App\Services\Support\ActivityLogService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -17,9 +17,10 @@ class ApprovalWorkflowService
     public function __construct(
         private readonly ActivityLogService $activityLogService
     ) {}
+
     public function sendForApproval(PurchaseRequest $purchaseRequest, User $user): Collection
     {
-        return DB::transaction(function () use ($purchaseRequest, $user): Collection {
+        return DB::transaction(function () use ($purchaseRequest): Collection {
             $purchaseRequest->refresh();
 
             if ($purchaseRequest->status !== PurchaseRequest::STATUS_QUOTES_RECEIVED) {

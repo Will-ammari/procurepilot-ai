@@ -220,26 +220,26 @@ class QuoteAnalysisApiTest extends TestCase
         return User::create([
             'organization_id' => $organization->id,
             'department_id' => $department?->id,
-            'name' => ucfirst($role) . ' User',
-            'email' => $role . uniqid('', true) . '@procurepilot.test',
+            'name' => ucfirst($role).' User',
+            'email' => $role.uniqid('', true).'@procurepilot.test',
             'password' => Hash::make('password'),
             'role' => $role,
         ]);
     }
 
-private function createVendor(
-    Organization $organization,
-    string $name = 'Müller Office GmbH'
-): Vendor {
-    return Vendor::create([
-        'organization_id' => $organization->id,
-        'name' => $name,
-        'legal_name' => $name,
-        'country' => 'DE',
-        'default_currency' => 'EUR',
-        'status' => Vendor::STATUS_ACTIVE,
-    ]);
-}
+    private function createVendor(
+        Organization $organization,
+        string $name = 'Müller Office GmbH'
+    ): Vendor {
+        return Vendor::create([
+            'organization_id' => $organization->id,
+            'name' => $name,
+            'legal_name' => $name,
+            'country' => 'DE',
+            'default_currency' => 'EUR',
+            'status' => Vendor::STATUS_ACTIVE,
+        ]);
+    }
 
     private function createPurchaseRequest(
         Organization $organization,

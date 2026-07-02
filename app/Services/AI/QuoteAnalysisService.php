@@ -2,17 +2,19 @@
 
 namespace App\Services\AI;
 
+use App\Models\ActivityLog;
 use App\Models\Quote;
 use App\Models\QuoteAnalysis;
-use App\Models\ActivityLog;
 use App\Models\User;
 use App\Services\Support\ActivityLogService;
+use App\Support\ApiDate;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
 class QuoteAnalysisService
 {
     private const LOCAL_MODEL_NAME = 'local-deterministic-quote-analyzer-v1';
+
     private const FASTAPI_MODEL_NAME = 'fastapi-mock-quote-analyzer-v1';
 
     public function __construct(
@@ -93,13 +95,13 @@ class QuoteAnalysisService
     {
         return [
             'quote_id' => $quote->id,
-            'vendor_name' => $quote->vendor?->name ?? 'Unknown vendor',
+            'vendor_name' => $quote->vendor->name ?? 'Unknown vendor',
             'total_amount' => (float) $quote->total_amount,
             'currency' => $quote->currency,
             'delivery_days' => $quote->delivery_days,
             'payment_terms' => $quote->payment_terms,
             'warranty_months' => $quote->warranty_months,
-            'items' => $quote->items->map(fn($item): array => [
+            'items' => $quote->items->map(fn ($item): array => [
                 'description' => (string) $item->description,
                 'quantity' => (float) $item->quantity,
                 'unit_price' => (float) $item->unit_price,
@@ -120,7 +122,7 @@ class QuoteAnalysisService
         $riskNotes = [];
 
         if (($remoteAnalysis['risk_level'] ?? 'low') !== 'low') {
-            $riskNotes[] = 'AI service detected ' . $remoteAnalysis['risk_level'] . ' risk level';
+            $riskNotes[] = 'AI service detected '.$remoteAnalysis['risk_level'].' risk level';
         }
 
         foreach (($remoteAnalysis['hidden_costs_notes'] ?? []) as $note) {
@@ -137,13 +139,13 @@ class QuoteAnalysisService
     private function extractTerms(Quote $quote): array
     {
         return [
-            'vendor_name' => $quote->vendor?->name,
+            'vendor_name' => $quote->vendor->name,
             'total_price' => (float) $quote->total_amount,
             'currency' => $quote->currency,
             'delivery_time_days' => $quote->delivery_days,
             'payment_terms' => $quote->payment_terms,
             'warranty_months' => $quote->warranty_months,
-            'valid_until' => $quote->valid_until?->toDateString(),
+            'valid_until' => ApiDate::date($quote->valid_until),
             'included_services' => $this->detectIncludedServices($quote),
             'excluded_services' => $this->detectExcludedServices($quote),
         ];
@@ -232,7 +234,7 @@ class QuoteAnalysisService
 
     private function buildSummary(Quote $quote, array $hiddenCosts, array $riskNotes): string
     {
-        $vendorName = $quote->vendor?->name ?? 'The vendor';
+        $vendorName = $quote->vendor->name ?? 'The vendor';
         $amount = number_format((float) $quote->total_amount, 2);
 
         $summary = "{$vendorName} offers a quote of {$amount} {$quote->currency}";
@@ -287,14 +289,14 @@ class QuoteAnalysisService
 
     private function buildRawTextSnapshot(Quote $quote): string
     {
-        return implode(PHP_EOL, array_filter([
-            'Vendor: ' . ($quote->vendor?->name ?? 'Unknown'),
-            'Total amount: ' . $quote->total_amount . ' ' . $quote->currency,
-            'Delivery days: ' . ($quote->delivery_days ?? 'N/A'),
-            'Payment terms: ' . ($quote->payment_terms ?? 'N/A'),
-            'Warranty months: ' . ($quote->warranty_months ?? 'N/A'),
-            'Valid until: ' . ($quote->valid_until?->toDateString() ?? 'N/A'),
-            'Notes: ' . ($quote->notes ?? 'N/A'),
-        ]));
+        return implode(PHP_EOL, [
+            'Vendor: '.($quote->vendor->name ?? 'Unknown'),
+            'Total amount: '.$quote->total_amount.' '.$quote->currency,
+            'Delivery days: '.($quote->delivery_days ?? 'N/A'),
+            'Payment terms: '.($quote->payment_terms ?? 'N/A'),
+            'Warranty months: '.($quote->warranty_months ?? 'N/A'),
+            'Valid until: '.(ApiDate::date($quote->valid_until) ?? 'N/A'),
+            'Notes: '.($quote->notes ?? 'N/A'),
+        ]);
     }
 }

@@ -14,8 +14,11 @@ class Quote extends Model
     use HasFactory;
 
     public const STATUS_DRAFT = 'draft';
+
     public const STATUS_RECEIVED = 'received';
+
     public const STATUS_ANALYSIS_PENDING = 'analysis_pending';
+
     public const STATUS_ANALYZED = 'analyzed';
 
     protected $fillable = [
@@ -39,33 +42,51 @@ class Quote extends Model
         'valid_until' => 'date',
     ];
 
+    /**
+     * @return BelongsTo<Organization, $this>
+     */
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
     }
 
+    /**
+     * @return BelongsTo<PurchaseRequest, $this>
+     */
     public function purchaseRequest(): BelongsTo
     {
         return $this->belongsTo(PurchaseRequest::class);
     }
 
+    /**
+     * @return BelongsTo<Vendor, $this>
+     */
     public function vendor(): BelongsTo
     {
         return $this->belongsTo(Vendor::class);
     }
 
+    /**
+     * @return HasMany<QuoteItem, $this>
+     */
     public function items(): HasMany
     {
         return $this->hasMany(QuoteItem::class);
     }
 
+    /**
+     * @return HasOne<QuoteAnalysis, $this>
+     */
     public function analysis(): HasOne
     {
         return $this->hasOne(QuoteAnalysis::class);
     }
 
+    /**
+     * @return MorphMany<Attachment, $this>
+     */
     public function attachments(): MorphMany
-{
-    return $this->morphMany(Attachment::class, 'attachable');
-}
+    {
+        return $this->morphMany(Attachment::class, 'attachable');
+    }
 }

@@ -12,17 +12,16 @@ class VendorScorecardController extends Controller
 {
     public function __construct(
         private readonly VendorScorecardService $vendorScorecardService
-    ) {
-    }
+    ) {}
 
     public function show(Vendor $vendor): JsonResponse
     {
         $this->authorize('view', $vendor);
 
         $scorecard = $this->vendorScorecardService->calculate(
-    vendor: $vendor,
-    user: request()->user()
-);
+            vendor: $vendor,
+            user: request()->user()
+        );
 
         return (new VendorScorecardResource($scorecard))
             ->response()

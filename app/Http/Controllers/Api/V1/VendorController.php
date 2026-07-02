@@ -17,8 +17,7 @@ class VendorController extends Controller
 {
     public function __construct(
         private readonly VendorService $vendorService
-    ) {
-    }
+    ) {}
 
     public function index(IndexVendorRequest $request): AnonymousResourceCollection
     {

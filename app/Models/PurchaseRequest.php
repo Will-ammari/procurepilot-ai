@@ -14,20 +14,33 @@ class PurchaseRequest extends Model
     use HasFactory;
 
     public const STATUS_DRAFT = 'draft';
+
     public const STATUS_SUBMITTED = 'submitted';
+
     public const STATUS_SOURCING = 'sourcing';
+
     public const STATUS_QUOTES_RECEIVED = 'quotes_received';
+
     public const STATUS_PENDING_APPROVAL = 'pending_approval';
+
     public const STATUS_APPROVED = 'approved';
+
     public const STATUS_REJECTED = 'rejected';
+
     public const STATUS_ORDERED = 'ordered';
+
     public const STATUS_INVOICED = 'invoiced';
+
     public const STATUS_PAID = 'paid';
+
     public const STATUS_CLOSED = 'closed';
 
     public const PRIORITY_LOW = 'low';
+
     public const PRIORITY_NORMAL = 'normal';
+
     public const PRIORITY_HIGH = 'high';
+
     public const PRIORITY_URGENT = 'urgent';
 
     protected $fillable = [
@@ -52,31 +65,49 @@ class PurchaseRequest extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Organization, $this>
+     */
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
     }
 
+    /**
+     * @return BelongsTo<Department, $this>
+     */
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function requester(): BelongsTo
     {
         return $this->belongsTo(User::class, 'requester_id');
     }
 
+    /**
+     * @return BelongsTo<Quote, $this>
+     */
     public function approvedQuote(): BelongsTo
     {
         return $this->belongsTo(Quote::class, 'approved_quote_id');
     }
 
+    /**
+     * @return HasMany<PurchaseRequestItem, $this>
+     */
     public function items(): HasMany
     {
         return $this->hasMany(PurchaseRequestItem::class);
     }
 
+    /**
+     * @return HasMany<Quote, $this>
+     */
     public function quotes(): HasMany
     {
         return $this->hasMany(Quote::class);
@@ -92,9 +123,12 @@ class PurchaseRequest extends Model
         return $this->hasOne(QuoteComparison::class)->latestOfMany();
     }
 
+    /**
+     * @return HasMany<ApprovalStep, $this>
+     */
     public function approvalSteps(): HasMany
     {
-        return $this->hasMany(ApprovalStep::class)->orderBy('sequence');
+        return $this->hasMany(ApprovalStep::class);
     }
 
     public function pendingApprovalStep(): HasOne
@@ -104,13 +138,19 @@ class PurchaseRequest extends Model
             ->orderBy('sequence');
     }
 
-    public function invoices(): HasMany
+    /**
+     * @return HasOne<Invoice, $this>
+     */
+    public function invoice(): HasOne
     {
-        return $this->hasMany(Invoice::class);
+        return $this->hasOne(Invoice::class);
     }
 
+    /**
+     * @return MorphMany<Attachment, $this>
+     */
     public function attachments(): MorphMany
-{
-    return $this->morphMany(Attachment::class, 'attachable');
-}
+    {
+        return $this->morphMany(Attachment::class, 'attachable');
+    }
 }

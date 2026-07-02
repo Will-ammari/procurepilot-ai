@@ -36,8 +36,8 @@ return [
     ],
 
     'ai' => [
-    'url' => env('AI_SERVICE_URL', 'http://ai-service:8000'),
-    'timeout' => env('AI_SERVICE_TIMEOUT', 5),
-],
+        'url' => env('AI_SERVICE_URL', 'http://ai-service:8000'),
+        'timeout' => env('AI_SERVICE_TIMEOUT', 5),
+    ],
 
 ];

@@ -15,8 +15,7 @@ class ApprovalWorkflowController extends Controller
 {
     public function __construct(
         private readonly ApprovalWorkflowService $approvalWorkflowService
-    ) {
-    }
+    ) {}
 
     public function sendForApproval(PurchaseRequest $purchaseRequest): AnonymousResourceCollection
     {

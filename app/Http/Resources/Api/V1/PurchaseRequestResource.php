@@ -2,9 +2,14 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Models\PurchaseRequest;
+use App\Support\ApiDate;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * @mixin PurchaseRequest
+ */
 class PurchaseRequestResource extends JsonResource
 {
     public function toArray(Request $request): array
@@ -16,7 +21,7 @@ class PurchaseRequestResource extends JsonResource
             'requester_id' => $this->requester_id,
             'title' => $this->title,
             'description' => $this->description,
-            'needed_by_date' => $this->needed_by_date?->toDateString(),
+            'needed_by_date' => ApiDate::date($this->needed_by_date),
             'estimated_budget' => $this->estimated_budget !== null
                 ? (float) $this->estimated_budget
                 : null,

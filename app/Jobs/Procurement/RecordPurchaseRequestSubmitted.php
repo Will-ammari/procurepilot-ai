@@ -11,6 +11,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class RecordPurchaseRequestSubmitted implements ShouldQueue
 {
@@ -23,10 +25,14 @@ class RecordPurchaseRequestSubmitted implements ShouldQueue
 
     public int $backoff = 10;
 
+    public int $timeout = 30;
+
     public function __construct(
         public readonly int $purchaseRequestId,
         public readonly int $submittedByUserId,
-    ) {}
+    ) {
+        $this->onQueue('procurement-events');
+    }
 
     public function handle(ActivityLogService $activityLogService): void
     {
@@ -34,6 +40,12 @@ class RecordPurchaseRequestSubmitted implements ShouldQueue
         $user = User::query()->find($this->submittedByUserId);
 
         if (! $purchaseRequest instanceof PurchaseRequest || ! $user instanceof User) {
+            Log::warning('Skipped submitted purchase request activity log because related records were missing.', [
+                'purchase_request_id' => $this->purchaseRequestId,
+                'submitted_by_user_id' => $this->submittedByUserId,
+                'job' => self::class,
+            ]);
+
             return;
         }
 
@@ -47,5 +59,15 @@ class RecordPurchaseRequestSubmitted implements ShouldQueue
                 'processed_by' => self::class,
             ]
         );
+    }
+
+    public function failed(Throwable $exception): void
+    {
+        Log::error('Failed to record submitted purchase request activity log.', [
+            'purchase_request_id' => $this->purchaseRequestId,
+            'submitted_by_user_id' => $this->submittedByUserId,
+            'exception' => $exception::class,
+            'message' => $exception->getMessage(),
+        ]);
     }
 }

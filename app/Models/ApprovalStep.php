@@ -11,12 +11,17 @@ class ApprovalStep extends Model
     use HasFactory;
 
     public const ROLE_MANAGER = 'manager';
+
     public const ROLE_FINANCE = 'finance';
+
     public const ROLE_ADMIN = 'admin';
 
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_APPROVED = 'approved';
+
     public const STATUS_REJECTED = 'rejected';
+
     public const STATUS_SKIPPED = 'skipped';
 
     protected $fillable = [
@@ -39,21 +44,33 @@ class ApprovalStep extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Organization, $this>
+     */
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
     }
 
+    /**
+     * @return BelongsTo<PurchaseRequest, $this>
+     */
     public function purchaseRequest(): BelongsTo
     {
         return $this->belongsTo(PurchaseRequest::class);
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function approver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approver_user_id');
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function decidedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'decided_by_user_id');

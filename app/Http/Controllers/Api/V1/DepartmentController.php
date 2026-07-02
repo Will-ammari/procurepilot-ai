@@ -17,8 +17,7 @@ class DepartmentController extends Controller
 {
     public function __construct(
         private readonly DepartmentService $departmentService
-    ) {
-    }
+    ) {}
 
     public function index(IndexDepartmentRequest $request): AnonymousResourceCollection
     {

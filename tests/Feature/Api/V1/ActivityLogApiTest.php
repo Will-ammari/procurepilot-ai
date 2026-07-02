@@ -143,7 +143,7 @@ class ActivityLogApiTest extends TestCase
 
         Sanctum::actingAs($finance);
 
-        $this->getJson('/api/v1/activity-logs?event=' . ActivityLog::EVENT_PURCHASE_REQUEST_SUBMITTED)
+        $this->getJson('/api/v1/activity-logs?event='.ActivityLog::EVENT_PURCHASE_REQUEST_SUBMITTED)
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.event', ActivityLog::EVENT_PURCHASE_REQUEST_SUBMITTED);
@@ -210,8 +210,8 @@ class ActivityLogApiTest extends TestCase
         return User::create([
             'organization_id' => $organization->id,
             'department_id' => $department?->id,
-            'name' => ucfirst($role) . ' User',
-            'email' => $role . uniqid('', true) . '@procurepilot.test',
+            'name' => ucfirst($role).' User',
+            'email' => $role.uniqid('', true).'@procurepilot.test',
             'password' => Hash::make('password'),
             'role' => $role,
         ]);

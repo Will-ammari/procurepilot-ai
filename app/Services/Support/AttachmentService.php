@@ -13,6 +13,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use InvalidArgumentException;
 
 class AttachmentService
 {
@@ -46,6 +47,14 @@ class AttachmentService
 
     public function storeForAttachable(Model $attachable, User $user, UploadedFile $file): Attachment
     {
+        if (
+            ! $attachable instanceof PurchaseRequest
+            && ! $attachable instanceof Quote
+            && ! $attachable instanceof Invoice
+        ) {
+            throw new InvalidArgumentException('Unsupported attachable model type.');
+        }
+
         $organizationId = (int) $attachable->organization_id;
         $directory = $this->directoryFor($attachable);
         $path = $file->store($directory, Attachment::DISK_PUBLIC);

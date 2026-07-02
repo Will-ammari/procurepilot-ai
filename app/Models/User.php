@@ -14,10 +14,15 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable;
 
     public const ROLE_ADMIN = 'admin';
+
     public const ROLE_REQUESTER = 'requester';
+
     public const ROLE_PROCUREMENT = 'procurement';
+
     public const ROLE_MANAGER = 'manager';
+
     public const ROLE_FINANCE = 'finance';
+
     public const ROLE_VIEWER = 'viewer';
 
     protected $fillable = [

@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 class VendorService
 {
     private const DEFAULT_PER_PAGE = 15;
+
     private const MAX_PER_PAGE = 100;
 
     public function paginatedForUser(User $user, array $filters = []): LengthAwarePaginator

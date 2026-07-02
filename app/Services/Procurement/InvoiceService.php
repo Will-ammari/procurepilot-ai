@@ -2,12 +2,13 @@
 
 namespace App\Services\Procurement;
 
+use App\Models\ActivityLog;
 use App\Models\Invoice;
 use App\Models\PurchaseRequest;
 use App\Models\User;
 use App\Models\Vendor;
-use App\Models\ActivityLog;
 use App\Services\Support\ActivityLogService;
+use App\Support\ApiDate;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -17,6 +18,7 @@ class InvoiceService
     public function __construct(
         private readonly ActivityLogService $activityLogService
     ) {}
+
     public function listForUser(User $user, array $filters = []): LengthAwarePaginator
     {
         $query = Invoice::query()
@@ -187,7 +189,7 @@ class InvoiceService
                     'purchase_request_id' => $invoice->purchase_request_id,
                     'vendor_id' => $invoice->vendor_id,
                     'invoice_number' => $invoice->invoice_number,
-                    'paid_at' => $invoice->paid_at?->toISOString(),
+                    'paid_at' => ApiDate::datetime($invoice->paid_at),
                     'total' => (float) $invoice->total,
                     'currency' => $invoice->currency,
                 ]
@@ -212,7 +214,7 @@ class InvoiceService
 
     private function resolveDefaultVatRate(PurchaseRequest $purchaseRequest): float
     {
-        return (float) ($purchaseRequest->organization?->vat_rate ?? 19.00);
+        return (float) ($purchaseRequest->organization->vat_rate ?? 19.00);
     }
 
     private function ensurePurchaseRequestCanReceiveInvoice(PurchaseRequest $purchaseRequest): void

@@ -12,9 +12,13 @@ class Invoice extends Model
     use HasFactory;
 
     public const STATUS_RECEIVED = 'received';
+
     public const STATUS_APPROVED = 'approved';
+
     public const STATUS_PAID = 'paid';
+
     public const STATUS_OVERDUE = 'overdue';
+
     public const STATUS_CANCELLED = 'cancelled';
 
     protected $fillable = [
@@ -47,16 +51,25 @@ class Invoice extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Organization, $this>
+     */
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
     }
 
+    /**
+     * @return BelongsTo<PurchaseRequest, $this>
+     */
     public function purchaseRequest(): BelongsTo
     {
         return $this->belongsTo(PurchaseRequest::class);
     }
 
+    /**
+     * @return BelongsTo<Vendor, $this>
+     */
     public function vendor(): BelongsTo
     {
         return $this->belongsTo(Vendor::class);
@@ -72,8 +85,11 @@ class Invoice extends Model
         return $this->status === self::STATUS_CANCELLED;
     }
 
+    /**
+     * @return MorphMany<Attachment, $this>
+     */
     public function attachments(): MorphMany
-{
-    return $this->morphMany(Attachment::class, 'attachable');
-}
+    {
+        return $this->morphMany(Attachment::class, 'attachable');
+    }
 }

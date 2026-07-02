@@ -2,13 +2,13 @@
 
 namespace App\Services\Procurement;
 
+use App\Models\ActivityLog;
 use App\Models\Invoice;
 use App\Models\PurchaseRequest;
 use App\Models\Quote;
+use App\Models\User;
 use App\Models\Vendor;
 use App\Models\VendorScorecard;
-use App\Models\ActivityLog;
-use App\Models\User;
 use App\Services\Support\ActivityLogService;
 use Illuminate\Support\Facades\DB;
 
@@ -17,6 +17,7 @@ class VendorScorecardService
     public function __construct(
         private readonly ActivityLogService $activityLogService
     ) {}
+
     public function calculate(Vendor $vendor, ?User $user = null): VendorScorecard
     {
         return DB::transaction(function () use ($vendor, $user): VendorScorecard {
@@ -66,6 +67,7 @@ class VendorScorecardService
                     'paid_invoices' => $scorecard->paid_invoices,
                 ]
             );
+
             return $scorecard->load('vendor');
         });
     }

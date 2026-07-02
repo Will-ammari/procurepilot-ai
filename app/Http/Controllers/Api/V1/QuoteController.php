@@ -18,8 +18,7 @@ class QuoteController extends Controller
 {
     public function __construct(
         private readonly QuoteService $quoteService
-    ) {
-    }
+    ) {}
 
     public function indexForPurchaseRequest(
         IndexQuoteRequest $request,

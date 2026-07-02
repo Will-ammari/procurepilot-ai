@@ -9,7 +9,7 @@ on:
       - main
 
 jobs:
-  tests:
+  quality:
     runs-on: ubuntu-latest
 
     services:
@@ -32,6 +32,11 @@ jobs:
         image: redis:7.4-alpine
         ports:
           - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
 
     steps:
       - name: Checkout code
@@ -53,7 +58,7 @@ jobs:
           php artisan key:generate
           php artisan config:clear
 
-      - name: Configure test database
+      - name: Configure test environment
         run: |
           echo "DB_CONNECTION=mysql" >> .env
           echo "DB_HOST=127.0.0.1" >> .env
@@ -70,5 +75,11 @@ jobs:
       - name: Run migrations
         run: php artisan migrate --force
 
+      - name: Check code style
+        run: composer lint
+
+      - name: Run static analysis
+        run: composer analyse
+
       - name: Run tests
-        run: php artisan test
+        run: composer test

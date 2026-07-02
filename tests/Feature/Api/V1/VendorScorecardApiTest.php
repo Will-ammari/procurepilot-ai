@@ -9,7 +9,6 @@ use App\Models\PurchaseRequest;
 use App\Models\Quote;
 use App\Models\User;
 use App\Models\Vendor;
-use App\Models\VendorScorecard;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\Sanctum;
@@ -233,8 +232,8 @@ class VendorScorecardApiTest extends TestCase
         return User::create([
             'organization_id' => $organization->id,
             'department_id' => $department?->id,
-            'name' => ucfirst($role) . ' User',
-            'email' => $role . uniqid('', true) . '@procurepilot.test',
+            'name' => ucfirst($role).' User',
+            'email' => $role.uniqid('', true).'@procurepilot.test',
             'password' => Hash::make('password'),
             'role' => $role,
         ]);
@@ -311,7 +310,7 @@ class VendorScorecardApiTest extends TestCase
             'organization_id' => $organization->id,
             'purchase_request_id' => $purchaseRequest->id,
             'vendor_id' => $vendor->id,
-            'invoice_number' => 'INV-' . uniqid(),
+            'invoice_number' => 'INV-'.uniqid(),
             'invoice_date' => now()->toDateString(),
             'due_date' => now()->addMonth()->toDateString(),
             'subtotal' => $subtotal,

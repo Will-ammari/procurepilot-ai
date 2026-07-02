@@ -15,7 +15,7 @@ class InvoiceBillingTest extends TestCase
 
     public function test_finance_user_can_create_invoice_with_calculated_vat_and_total(): void
     {
-        $scenario = new ProcurementTestScenario();
+        $scenario = new ProcurementTestScenario;
 
         $purchaseRequest = $scenario->purchaseRequest([
             'status' => PurchaseRequest::STATUS_APPROVED,
@@ -47,7 +47,7 @@ class InvoiceBillingTest extends TestCase
 
     public function test_invoice_vendor_must_match_approved_quote_vendor_when_present(): void
     {
-        $scenario = new ProcurementTestScenario();
+        $scenario = new ProcurementTestScenario;
 
         $approvedVendor = $scenario->vendor([
             'name' => 'Approved Supplier GmbH',
@@ -85,7 +85,7 @@ class InvoiceBillingTest extends TestCase
 
     public function test_paid_invoice_cannot_be_updated(): void
     {
-        $scenario = new ProcurementTestScenario();
+        $scenario = new ProcurementTestScenario;
 
         $invoice = Invoice::factory()->create([
             'organization_id' => $scenario->organization->id,
