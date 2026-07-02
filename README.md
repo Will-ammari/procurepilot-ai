@@ -6,7 +6,7 @@
 
 The project models a complete procurement workflow: employees create purchase requests, procurement teams collect supplier quotes, the system analyzes and compares offers, approval steps are generated based on budget thresholds, finance tracks invoices and VAT, and vendor performance is calculated through scorecards.
 
-> Current quality status: **Laravel Pint passing / PHPStan no errors / 97 tests passed / 359 assertions**
+> Current quality status: **Laravel Pint passing / PHPStan no errors / 101 tests passed / 367 assertions**
 
 ---
 
