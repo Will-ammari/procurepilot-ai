@@ -15,7 +15,8 @@ class ActivityLogService
         ?User $user = null,
         ?Model $subject = null,
         array $metadata = [],
-        ?int $organizationId = null
+        ?int $organizationId = null,
+        ?string $idempotencyKey = null
     ): ActivityLog {
         $resolvedOrganizationId = $organizationId
             ?? $this->organizationIdFromUser($user)
@@ -25,7 +26,7 @@ class ActivityLogService
             throw new InvalidArgumentException('Activity log requires an organization context.');
         }
 
-        return ActivityLog::create([
+        $attributes = [
             'organization_id' => $resolvedOrganizationId,
             'user_id' => $user?->id,
             'event' => $event,
@@ -34,7 +35,17 @@ class ActivityLogService
             'metadata' => $metadata,
             'ip_address' => Request::ip(),
             'user_agent' => Request::userAgent(),
-        ]);
+        ];
+
+        if ($idempotencyKey !== null) {
+            // Atomic uniqueness is enforced by the database, not a check-then-insert.
+            return ActivityLog::query()->createOrFirst(
+                ['idempotency_key' => $idempotencyKey],
+                $attributes
+            );
+        }
+
+        return ActivityLog::create($attributes);
     }
 
     private function organizationIdFromUser(?User $user): ?int

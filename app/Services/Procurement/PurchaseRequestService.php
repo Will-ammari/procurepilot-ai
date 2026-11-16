@@ -11,6 +11,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 class PurchaseRequestService
@@ -73,6 +74,14 @@ class PurchaseRequestService
     public function update(PurchaseRequest $purchaseRequest, array $data): PurchaseRequest
     {
         return DB::transaction(function () use ($purchaseRequest, $data): PurchaseRequest {
+            $purchaseRequest = PurchaseRequest::query()->lockForUpdate()->findOrFail($purchaseRequest->id);
+
+            if (! in_array($purchaseRequest->status, [PurchaseRequest::STATUS_DRAFT, PurchaseRequest::STATUS_SUBMITTED], true)) {
+                throw ValidationException::withMessages([
+                    'status' => ['This purchase request can no longer be edited.'],
+                ]);
+            }
+
             $items = $data['items'] ?? null;
             $purchaseRequestData = Arr::except($data, ['items']);
 
@@ -93,11 +102,15 @@ class PurchaseRequestService
     public function submit(PurchaseRequest $purchaseRequest, User $user): PurchaseRequest
     {
         return DB::transaction(function () use ($purchaseRequest, $user): PurchaseRequest {
+            $purchaseRequest = PurchaseRequest::query()->lockForUpdate()->findOrFail($purchaseRequest->id);
+
             if ($purchaseRequest->status !== PurchaseRequest::STATUS_DRAFT) {
                 throw ValidationException::withMessages([
                     'status' => ['Only draft purchase requests can be submitted.'],
                 ]);
             }
+
+            Gate::forUser($user)->authorize('submit', $purchaseRequest);
 
             if ($purchaseRequest->items()->count() < 1) {
                 throw ValidationException::withMessages([
@@ -121,6 +134,13 @@ class PurchaseRequestService
     public function delete(PurchaseRequest $purchaseRequest): void
     {
         DB::transaction(function () use ($purchaseRequest): void {
+            $purchaseRequest = PurchaseRequest::query()->lockForUpdate()->findOrFail($purchaseRequest->id);
+            if ($purchaseRequest->status !== PurchaseRequest::STATUS_DRAFT) {
+                throw ValidationException::withMessages([
+                    'status' => ['Only draft purchase requests can be deleted.'],
+                ]);
+            }
+
             $purchaseRequest->delete();
         });
     }

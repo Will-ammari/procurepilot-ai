@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\Support\ActivityLogService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 class ApprovalWorkflowService
@@ -20,14 +21,16 @@ class ApprovalWorkflowService
 
     public function sendForApproval(PurchaseRequest $purchaseRequest, User $user): Collection
     {
-        return DB::transaction(function () use ($purchaseRequest): Collection {
-            $purchaseRequest->refresh();
-
+        return DB::transaction(function () use ($purchaseRequest, $user): Collection {
+            // Lock the aggregate before checking state or inserting steps.
+            $purchaseRequest = PurchaseRequest::query()->lockForUpdate()->findOrFail($purchaseRequest->id);
             if ($purchaseRequest->status !== PurchaseRequest::STATUS_QUOTES_RECEIVED) {
                 throw ValidationException::withMessages([
                     'purchase_request' => ['Only purchase requests with received quotes can be sent for approval.'],
                 ]);
             }
+
+            Gate::forUser($user)->authorize('sendForApproval', $purchaseRequest);
 
             if ($purchaseRequest->approvalSteps()->exists()) {
                 throw ValidationException::withMessages([
@@ -47,17 +50,15 @@ class ApprovalWorkflowService
             }
 
             $approvalRoles = $this->resolveRequiredApprovalRoles($purchaseRequest);
-            $steps = collect();
-
             foreach ($approvalRoles as $index => $approvalRole) {
-                $steps->push(ApprovalStep::create([
+                ApprovalStep::create([
                     'organization_id' => $purchaseRequest->organization_id,
                     'purchase_request_id' => $purchaseRequest->id,
                     'sequence' => $index + 1,
                     'approval_role' => $approvalRole,
                     'approver_user_id' => $this->resolveApproverUserId($purchaseRequest, $approvalRole),
                     'status' => ApprovalStep::STATUS_PENDING,
-                ]));
+                ]);
             }
 
             $purchaseRequest->update([
@@ -75,8 +76,9 @@ class ApprovalWorkflowService
     public function approve(ApprovalStep $approvalStep, User $user, ?string $comment = null): ApprovalStep
     {
         return DB::transaction(function () use ($approvalStep, $user, $comment): ApprovalStep {
-            $approvalStep->refresh();
+            $approvalStep = $this->lockStepWithinPurchaseRequest($approvalStep);
             $this->ensureStepCanBeDecided($approvalStep);
+            Gate::forUser($user)->authorize('approve', $approvalStep);
 
             $approvalStep->update([
                 'status' => ApprovalStep::STATUS_APPROVED,
@@ -105,8 +107,9 @@ class ApprovalWorkflowService
     public function reject(ApprovalStep $approvalStep, User $user, string $comment): ApprovalStep
     {
         return DB::transaction(function () use ($approvalStep, $user, $comment): ApprovalStep {
-            $approvalStep->refresh();
+            $approvalStep = $this->lockStepWithinPurchaseRequest($approvalStep);
             $this->ensureStepCanBeDecided($approvalStep);
+            Gate::forUser($user)->authorize('reject', $approvalStep);
 
             $approvalStep->update([
                 'status' => ApprovalStep::STATUS_REJECTED,
@@ -132,6 +135,26 @@ class ApprovalWorkflowService
 
             return $approvalStep->load(['approver', 'decidedBy', 'purchaseRequest']);
         });
+    }
+
+    /**
+     * Serialize all decisions for a purchase request by locking the parent first.
+     * Every approval path must acquire locks in the same order to avoid deadlocks.
+     */
+    private function lockStepWithinPurchaseRequest(ApprovalStep $step): ApprovalStep
+    {
+        $purchaseRequest = PurchaseRequest::query()->lockForUpdate()->findOrFail($step->purchase_request_id);
+        $lockedStep = ApprovalStep::query()->lockForUpdate()->findOrFail($step->id);
+        if ($lockedStep->purchase_request_id !== $purchaseRequest->id) {
+            throw ValidationException::withMessages([
+                'approval_step' => ['The approval step was reassigned. Please refresh.'],
+            ]);
+        }
+
+        // Never trust relations that may have been loaded before acquiring the lock.
+        $lockedStep->setRelation('purchaseRequest', $purchaseRequest);
+
+        return $lockedStep;
     }
 
     private function resolveRequiredApprovalRoles(PurchaseRequest $purchaseRequest): array

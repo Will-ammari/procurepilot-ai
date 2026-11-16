@@ -3,13 +3,18 @@
 namespace App\Services\AI;
 
 use App\Models\ActivityLog;
+use App\Models\PurchaseRequest;
 use App\Models\Quote;
 use App\Models\QuoteAnalysis;
 use App\Models\User;
 use App\Services\Support\ActivityLogService;
 use App\Support\ApiDate;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\DB;
-use Throwable;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
+use UnexpectedValueException;
 
 class QuoteAnalysisService
 {
@@ -24,39 +29,74 @@ class QuoteAnalysisService
 
     public function analyze(Quote $quote, ?User $user = null): QuoteAnalysis
     {
-        return DB::transaction(function () use ($quote, $user): QuoteAnalysis {
-            $quote->loadMissing(['vendor', 'purchaseRequest', 'items']);
+        // Prepare a coherent read snapshot without keeping a DB transaction open
+        // across a network request (including timeouts and provider errors).
+        $quote = Quote::query()->with(['vendor', 'items'])->findOrFail($quote->id);
+        $fingerprint = $this->snapshotFingerprint($quote);
+        $localTerms = $this->extractTerms($quote);
+        $rawText = $this->buildRawTextSnapshot($quote);
 
-            $localTerms = $this->extractTerms($quote);
-            $rawText = $this->buildRawTextSnapshot($quote);
-            if ((bool) config('services.ai.enabled')) {
-                try {
-                    $remoteAnalysis = $this->quoteAnalysisClient->analyze(
-                        $this->buildFastApiPayload($quote)
-                    );
+        $hiddenCosts = $this->detectHiddenCosts($quote);
+        $riskNotes = $this->detectRiskNotes($quote);
+        $summary = $this->buildSummary($quote, $hiddenCosts, $riskNotes);
+        $confidenceScore = $this->calculateConfidenceScore($quote, $riskNotes);
+        $modelName = self::LOCAL_MODEL_NAME;
 
-                    $summary = (string) ($remoteAnalysis['summary'] ?? $this->buildSummary($quote, [], []));
-                    $hiddenCosts = $this->mapFastApiHiddenCosts($remoteAnalysis);
-                    $riskNotes = $this->mapFastApiRiskNotes($remoteAnalysis);
-                    $confidenceScore = (float) ($remoteAnalysis['confidence_score'] ?? $this->calculateConfidenceScore($quote, $riskNotes));
-                    $modelName = self::FASTAPI_MODEL_NAME;
-                } catch (Throwable) {
-                    $hiddenCosts = $this->detectHiddenCosts($quote);
-                    $riskNotes = $this->detectRiskNotes($quote);
-                    $summary = $this->buildSummary($quote, $hiddenCosts, $riskNotes);
-                    $confidenceScore = $this->calculateConfidenceScore($quote, $riskNotes);
-                    $modelName = self::LOCAL_MODEL_NAME;
-                }
-            } else {
-                $hiddenCosts = $this->detectHiddenCosts($quote);
-                $riskNotes = $this->detectRiskNotes($quote);
-                $summary = $this->buildSummary($quote, $hiddenCosts, $riskNotes);
-                $confidenceScore = $this->calculateConfidenceScore($quote, $riskNotes);
-                $modelName = self::LOCAL_MODEL_NAME;
+        if ((bool) config('services.ai.enabled')) {
+            try {
+                $remoteAnalysis = $this->quoteAnalysisClient->analyze($this->buildFastApiPayload($quote));
+                $hiddenCosts = $this->mapFastApiHiddenCosts($remoteAnalysis);
+                $riskNotes = $this->mapFastApiRiskNotes($remoteAnalysis);
+                $summary = $remoteAnalysis['summary'];
+                $confidenceScore = (float) $remoteAnalysis['confidence_score'];
+                $modelName = self::FASTAPI_MODEL_NAME;
+            } catch (ConnectionException|RequestException|UnexpectedValueException $exception) {
+                // Avoid leaking provider payloads or customer data into logs.
+                Log::warning('Quote analyzer unavailable; using deterministic fallback.', [
+                    'quote_id' => $quote->id,
+                    'exception' => $exception::class,
+                ]);
+            }
+        }
+
+        return DB::transaction(function () use (
+            $quote,
+            $fingerprint,
+            $user,
+            $localTerms,
+            $rawText,
+            $summary,
+            $hiddenCosts,
+            $riskNotes,
+            $confidenceScore,
+            $modelName
+        ): QuoteAnalysis {
+            // Always lock the parent before the quote, matching QuoteService.
+            $purchaseRequest = PurchaseRequest::query()->lockForUpdate()->findOrFail($quote->purchase_request_id);
+            if (in_array($purchaseRequest->status, [
+                PurchaseRequest::STATUS_PENDING_APPROVAL,
+                PurchaseRequest::STATUS_APPROVED,
+                PurchaseRequest::STATUS_ORDERED,
+                PurchaseRequest::STATUS_INVOICED,
+                PurchaseRequest::STATUS_PAID,
+                PurchaseRequest::STATUS_CLOSED,
+            ], true)) {
+                throw ValidationException::withMessages([
+                    'quote' => ['Quotes cannot be analyzed after approval has started.'],
+                ]);
+            }
+
+            $lockedQuote = Quote::query()->lockForUpdate()->findOrFail($quote->id);
+            $lockedQuote->load(['vendor', 'items']);
+
+            if (! hash_equals($fingerprint, $this->snapshotFingerprint($lockedQuote))) {
+                throw ValidationException::withMessages([
+                    'quote' => ['Quote changed during analysis. Please retry.'],
+                ]);
             }
 
             $analysis = QuoteAnalysis::updateOrCreate(
-                ['quote_id' => $quote->id],
+                ['quote_id' => $lockedQuote->id],
                 [
                     'raw_text' => $rawText,
                     'summary' => $summary,
@@ -69,26 +109,37 @@ class QuoteAnalysisService
                 ]
             );
 
-            $quote->update([
-                'status' => Quote::STATUS_ANALYZED,
-            ]);
+            $lockedQuote->update(['status' => Quote::STATUS_ANALYZED]);
 
             $this->activityLogService->log(
                 event: ActivityLog::EVENT_QUOTE_ANALYSIS_COMPLETED,
                 user: $user,
-                subject: $quote,
+                subject: $lockedQuote,
                 metadata: [
-                    'quote_id' => $quote->id,
-                    'purchase_request_id' => $quote->purchase_request_id,
+                    'quote_id' => $lockedQuote->id,
+                    'purchase_request_id' => $lockedQuote->purchase_request_id,
                     'analysis_id' => $analysis->id,
                     'confidence_score' => (float) $analysis->confidence_score,
                     'model_name' => $analysis->model_name,
                 ],
-                organizationId: $quote->organization_id
+                organizationId: $lockedQuote->organization_id
             );
 
             return $analysis->fresh();
         });
+    }
+
+    private function snapshotFingerprint(Quote $quote): string
+    {
+        $payload = [
+            'quote' => $quote->getAttributes(),
+            'vendor' => $quote->vendor?->getAttributes(),
+            'items' => $quote->items->sortBy('id')->values()->map(
+                fn ($item): array => $item->getAttributes()
+            )->all(),
+        ];
+
+        return hash('sha256', json_encode($payload, JSON_THROW_ON_ERROR));
     }
 
     private function buildFastApiPayload(Quote $quote): array

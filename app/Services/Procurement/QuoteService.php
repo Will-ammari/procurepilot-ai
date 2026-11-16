@@ -48,6 +48,17 @@ class QuoteService
         array $data
     ): Quote {
         return DB::transaction(function () use ($purchaseRequest, $user, $data): Quote {
+            $purchaseRequest = PurchaseRequest::query()->lockForUpdate()->findOrFail($purchaseRequest->id);
+            if (! in_array($purchaseRequest->status, [
+                PurchaseRequest::STATUS_SUBMITTED,
+                PurchaseRequest::STATUS_SOURCING,
+                PurchaseRequest::STATUS_QUOTES_RECEIVED,
+            ], true)) {
+                throw ValidationException::withMessages([
+                    'purchase_request' => ['This purchase request no longer accepts quotes.'],
+                ]);
+            }
+
             $vendor = Vendor::query()
                 ->where('organization_id', $user->organization_id)
                 ->findOrFail($data['vendor_id']);
@@ -105,6 +116,10 @@ class QuoteService
     public function update(Quote $quote, array $data): Quote
     {
         return DB::transaction(function () use ($quote, $data): Quote {
+            $purchaseRequest = PurchaseRequest::query()->lockForUpdate()->findOrFail($quote->purchase_request_id);
+            $quote = Quote::query()->lockForUpdate()->findOrFail($quote->id);
+            $this->ensureQuoteCanBeChanged($purchaseRequest);
+
             $items = $data['items'] ?? null;
             $quoteData = Arr::except($data, ['items']);
 
@@ -125,8 +140,28 @@ class QuoteService
     public function delete(Quote $quote): void
     {
         DB::transaction(function () use ($quote): void {
+            $purchaseRequest = PurchaseRequest::query()->lockForUpdate()->findOrFail($quote->purchase_request_id);
+            $quote = Quote::query()->lockForUpdate()->findOrFail($quote->id);
+            $this->ensureQuoteCanBeChanged($purchaseRequest);
+
             $quote->delete();
         });
+    }
+
+    private function ensureQuoteCanBeChanged(PurchaseRequest $purchaseRequest): void
+    {
+        if (in_array($purchaseRequest->status, [
+            PurchaseRequest::STATUS_PENDING_APPROVAL,
+            PurchaseRequest::STATUS_APPROVED,
+            PurchaseRequest::STATUS_ORDERED,
+            PurchaseRequest::STATUS_INVOICED,
+            PurchaseRequest::STATUS_PAID,
+            PurchaseRequest::STATUS_CLOSED,
+        ], true)) {
+            throw ValidationException::withMessages([
+                'purchase_request' => ['Quotes cannot be changed after the approval workflow has started.'],
+            ]);
+        }
     }
 
     private function replaceItems(Quote $quote, array $items): void

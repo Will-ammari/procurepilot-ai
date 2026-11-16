@@ -38,6 +38,7 @@ class ActivityLog extends Model
         'subject_type',
         'subject_id',
         'metadata',
+        'idempotency_key',
         'ip_address',
         'user_agent',
     ];

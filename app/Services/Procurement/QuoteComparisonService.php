@@ -30,6 +30,16 @@ class QuoteComparisonService
     public function generate(PurchaseRequest $purchaseRequest, User $user): QuoteComparison
     {
         return DB::transaction(function () use ($purchaseRequest, $user): QuoteComparison {
+            $purchaseRequest = PurchaseRequest::query()->lockForUpdate()->findOrFail($purchaseRequest->id);
+            if (! in_array($purchaseRequest->status, [
+                PurchaseRequest::STATUS_SOURCING,
+                PurchaseRequest::STATUS_QUOTES_RECEIVED,
+            ], true)) {
+                throw ValidationException::withMessages([
+                    'purchase_request' => ['The purchase request cannot be compared in its current state.'],
+                ]);
+            }
+
             $purchaseRequest->loadMissing([
                 'quotes.vendor',
                 'quotes.analysis',

@@ -36,6 +36,7 @@ return [
     ],
 
     'ai' => [
+        'enabled' => (bool) env('AI_SERVICE_ENABLED', false),
         'url' => env('AI_SERVICE_URL', 'http://ai-service:8000'),
         'timeout' => env('AI_SERVICE_TIMEOUT', 5),
     ],

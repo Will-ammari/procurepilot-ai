@@ -50,7 +50,7 @@ class InvoiceService
             $query->where('purchase_request_id', $filters['purchase_request_id']);
         }
 
-        return $query->paginate((int) ($filters['per_page'] ?? 15));
+        return $query->paginate(max(1, min(100, (int) ($filters['per_page'] ?? 15))));
     }
 
     public function create(array $data, User $user): Invoice
@@ -58,6 +58,7 @@ class InvoiceService
         return DB::transaction(function () use ($data, $user): Invoice {
             $purchaseRequest = PurchaseRequest::query()
                 ->where('organization_id', $user->organization_id)
+                ->lockForUpdate()
                 ->findOrFail($data['purchase_request_id']);
 
             $vendor = Vendor::query()
@@ -120,7 +121,9 @@ class InvoiceService
     public function update(Invoice $invoice, array $data): Invoice
     {
         return DB::transaction(function () use ($invoice, $data): Invoice {
-            $invoice->refresh();
+            // Parent first, invoice second: consistent with markPaid() and create().
+            PurchaseRequest::query()->lockForUpdate()->findOrFail($invoice->purchase_request_id);
+            $invoice = Invoice::query()->lockForUpdate()->findOrFail($invoice->id);
 
             if ($invoice->isPaid() || $invoice->isCancelled()) {
                 throw ValidationException::withMessages([
@@ -158,7 +161,8 @@ class InvoiceService
     public function markPaid(Invoice $invoice, User $user): Invoice
     {
         return DB::transaction(function () use ($invoice, $user): Invoice {
-            $invoice->refresh();
+            $purchaseRequest = PurchaseRequest::query()->lockForUpdate()->findOrFail($invoice->purchase_request_id);
+            $invoice = Invoice::query()->lockForUpdate()->findOrFail($invoice->id);
 
             if ($invoice->isPaid()) {
                 throw ValidationException::withMessages([
@@ -177,7 +181,7 @@ class InvoiceService
                 'paid_at' => now(),
             ]);
 
-            $invoice->purchaseRequest->update([
+            $purchaseRequest->update([
                 'status' => PurchaseRequest::STATUS_PAID,
             ]);
 

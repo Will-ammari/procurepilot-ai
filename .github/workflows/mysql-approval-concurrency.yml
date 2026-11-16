@@ -1,0 +1,51 @@
+name: MySQL Approval Concurrency
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  approval-concurrency:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: procurepilot_concurrency_test
+          MYSQL_USER: procurepilot
+          MYSQL_PASSWORD: secret
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: bcmath, intl, mbstring, pdo_mysql, zip
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --optimize-autoloader
+      - name: Prepare test application
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          php artisan config:clear
+      - name: Exercise actual concurrent decisions
+        env:
+          APP_ENV: testing
+          PROCUREPILOT_CONCURRENCY_TEST: '1'
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: '3306'
+          DB_DATABASE: procurepilot_concurrency_test
+          DB_USERNAME: procurepilot
+          DB_PASSWORD: secret
+          DB_URL: ''
+        run: php vendor/bin/phpunit --configuration=phpunit.mysql.xml

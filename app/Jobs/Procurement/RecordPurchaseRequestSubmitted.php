@@ -57,7 +57,8 @@ class RecordPurchaseRequestSubmitted implements ShouldQueue
                 'status' => PurchaseRequest::STATUS_SUBMITTED,
                 'submitted_at' => now()->toISOString(),
                 'processed_by' => self::class,
-            ]
+            ],
+            idempotencyKey: 'purchase_request.submitted:'.$this->purchaseRequestId
         );
     }
 
