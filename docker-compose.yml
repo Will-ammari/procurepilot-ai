@@ -30,6 +30,23 @@ services:
     networks:
       - procurepilot
 
+  # Enable via: docker compose --profile ops up -d outbox
+  outbox:
+    profiles: [ops]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    working_dir: /var/www/html
+    command: php artisan ops:outbox:publish --loop --sleep=5
+    volumes:
+      - ./:/var/www/html
+    depends_on:
+      - db
+      - redis
+    networks:
+      - procurepilot
+
   nginx:
     image: nginx:1.27-alpine
     container_name: procurepilot_nginx

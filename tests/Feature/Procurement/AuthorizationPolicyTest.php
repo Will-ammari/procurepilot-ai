@@ -5,6 +5,7 @@ namespace Tests\Feature\Procurement;
 use App\Jobs\Procurement\RecordPurchaseRequestSubmitted;
 use App\Models\PurchaseRequest;
 use App\Models\User;
+use App\Services\Outbox\OutboxPublisher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Tests\Support\ProcurementTestScenario;
@@ -31,6 +32,12 @@ class AuthorizationPolicyTest extends TestCase
             'status' => PurchaseRequest::STATUS_SUBMITTED,
         ]);
 
+        $this->assertDatabaseHas('outbox_messages', [
+            'event_key' => 'purchase_request.submitted:'.$purchaseRequest->id,
+            'status' => 'pending',
+        ]);
+        Bus::assertNotDispatched(RecordPurchaseRequestSubmitted::class);
+        app(OutboxPublisher::class)->publish();
         Bus::assertDispatched(RecordPurchaseRequestSubmitted::class);
     }
 

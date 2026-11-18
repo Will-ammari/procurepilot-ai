@@ -2,10 +2,10 @@
 
 namespace App\Services\Procurement;
 
-use App\Jobs\Procurement\RecordPurchaseRequestSubmitted;
 use App\Models\ActivityLog;
 use App\Models\PurchaseRequest;
 use App\Models\User;
+use App\Services\Outbox\OutboxWriter;
 use App\Services\Support\ActivityLogService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -17,7 +17,8 @@ use Illuminate\Validation\ValidationException;
 class PurchaseRequestService
 {
     public function __construct(
-        private readonly ActivityLogService $activityLogService
+        private readonly ActivityLogService $activityLogService,
+        private readonly OutboxWriter $outboxWriter
     ) {}
 
     private const DEFAULT_PER_PAGE = 15;
@@ -122,10 +123,8 @@ class PurchaseRequestService
                 'status' => PurchaseRequest::STATUS_SUBMITTED,
             ]);
 
-            RecordPurchaseRequestSubmitted::dispatch(
-                purchaseRequestId: $purchaseRequest->id,
-                submittedByUserId: $user->id,
-            )->afterCommit();
+            // Atomic with the status change; polling/publishing happens separately.
+            $this->outboxWriter->purchaseRequestSubmitted($purchaseRequest, $user);
 
             return $purchaseRequest->fresh(['department', 'requester', 'items']);
         });

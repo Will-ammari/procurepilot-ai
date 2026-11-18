@@ -5,8 +5,10 @@ namespace Tests\Feature\Api\V1;
 use App\Models\ActivityLog;
 use App\Models\Department;
 use App\Models\Organization;
+use App\Models\OutboxMessage;
 use App\Models\PurchaseRequest;
 use App\Models\User;
+use App\Services\Outbox\OutboxPublisher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\Sanctum;
@@ -74,6 +76,20 @@ class ActivityLogApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.status', PurchaseRequest::STATUS_SUBMITTED);
 
+        $this->assertDatabaseHas('outbox_messages', [
+            'event_key' => 'purchase_request.submitted:'.$purchaseRequest->id,
+            'status' => OutboxMessage::STATUS_PENDING,
+        ]);
+        $this->assertDatabaseMissing('activity_logs', [
+            'event' => ActivityLog::EVENT_PURCHASE_REQUEST_SUBMITTED,
+            'subject_id' => $purchaseRequest->id,
+        ]);
+
+        $this->assertSame(1, app(OutboxPublisher::class)->publish()['dispatched']);
+        $this->assertDatabaseHas('outbox_messages', [
+            'event_key' => 'purchase_request.submitted:'.$purchaseRequest->id,
+            'status' => OutboxMessage::STATUS_DISPATCHED,
+        ]);
         $this->assertDatabaseHas('activity_logs', [
             'organization_id' => $organization->id,
             'user_id' => $requester->id,

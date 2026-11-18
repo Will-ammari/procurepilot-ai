@@ -1,4 +1,4 @@
-name: MySQL Approval Concurrency
+name: MySQL Concurrency & Outbox Reliability
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  approval-concurrency:
+  approval-and-outbox-concurrency:
     runs-on: ubuntu-latest
     services:
       mysql:
@@ -37,7 +37,7 @@ jobs:
           cp .env.example .env
           php artisan key:generate
           php artisan config:clear
-      - name: Exercise actual concurrent decisions
+      - name: Exercise real MySQL approval and outbox races
         env:
           APP_ENV: testing
           PROCUREPILOT_CONCURRENCY_TEST: '1'

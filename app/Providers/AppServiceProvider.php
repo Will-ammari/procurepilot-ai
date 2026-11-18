@@ -10,8 +10,13 @@ use App\Policies\DepartmentPolicy;
 use App\Policies\PurchaseRequestPolicy;
 use App\Policies\QuotePolicy;
 use App\Policies\VendorPolicy;
+use App\Services\Monitoring\ApiRequestTelemetry;
+use App\Services\Outbox\OutboxTransport;
+use App\Services\Outbox\QueueOutboxTransport;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Foundation\Http\Events\RequestHandled;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
@@ -21,11 +26,13 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        $this->app->bind(OutboxTransport::class, QueueOutboxTransport::class);
     }
 
     public function boot(): void
     {
+        Event::listen(RequestHandled::class, ApiRequestTelemetry::class);
+
         RateLimiter::for('login', static function (Request $request): array {
             $identity = Str::lower(trim((string) $request->input('email', '')));
 

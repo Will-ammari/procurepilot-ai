@@ -4,8 +4,9 @@
          bootstrap="vendor/autoload.php"
          colors="true">
     <testsuites>
-        <testsuite name="MySQL Concurrency">
+        <testsuite name="MySQL Concurrency and Outbox">
             <file>tests/Feature/Procurement/MySqlApprovalConcurrencyTest.php</file>
+            <file>tests/Feature/Operations/MySqlOutboxConcurrencyTest.php</file>
         </testsuite>
     </testsuites>
     <php>

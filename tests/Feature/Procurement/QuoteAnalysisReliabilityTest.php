@@ -9,6 +9,7 @@ use App\Models\QuoteAnalysis;
 use App\Services\AI\QuoteAnalysisClient;
 use App\Services\AI\QuoteAnalysisService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\ValidationException;
@@ -82,6 +83,21 @@ class QuoteAnalysisReliabilityTest extends TestCase
 
         $this->expectException(UnexpectedValueException::class);
         app(QuoteAnalysisClient::class)->analyze(['quote_id' => 100]);
+    }
+
+    public function test_connection_failure_uses_deterministic_fallback_without_rollback(): void
+    {
+        $scenario = new ProcurementTestScenario;
+        $quote = $this->quote($scenario);
+        config()->set('services.ai.enabled', true);
+        Http::fake(static function (): never {
+            throw new ConnectionException('Simulated FastAPI timeout.');
+        });
+
+        $analysis = app(QuoteAnalysisService::class)->analyze($quote, $scenario->procurement);
+
+        $this->assertSame('local-deterministic-quote-analyzer-v1', $analysis->model_name);
+        $this->assertDatabaseHas('quote_analyses', ['quote_id' => $quote->id]);
     }
 
     private function quote(ProcurementTestScenario $scenario): Quote

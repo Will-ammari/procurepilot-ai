@@ -7,6 +7,7 @@ use App\Models\Department;
 use App\Models\Organization;
 use App\Models\PurchaseRequest;
 use App\Models\User;
+use App\Services\Outbox\OutboxPublisher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Queue;
@@ -369,7 +370,7 @@ class PurchaseRequestApiTest extends TestCase
         ]);
     }
 
-    public function test_submit_dispatches_activity_log_job_after_commit(): void
+    public function test_submit_writes_durable_outbox_and_publisher_dispatches_job(): void
     {
         Queue::fake();
 
@@ -384,6 +385,13 @@ class PurchaseRequestApiTest extends TestCase
         $this->postJson("/api/v1/purchase-requests/{$purchaseRequest->id}/submit")
             ->assertOk()
             ->assertJsonPath('data.status', PurchaseRequest::STATUS_SUBMITTED);
+
+        $this->assertDatabaseHas('outbox_messages', [
+            'event_key' => 'purchase_request.submitted:'.$purchaseRequest->id,
+            'status' => 'pending',
+        ]);
+        Queue::assertNotPushed(RecordPurchaseRequestSubmitted::class);
+        app(OutboxPublisher::class)->publish();
 
         Queue::assertPushedOn(
             'procurement-events',
