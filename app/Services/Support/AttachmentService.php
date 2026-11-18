@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+use RuntimeException;
+use Throwable;
 
 class AttachmentService
 {
@@ -56,23 +58,35 @@ class AttachmentService
         }
 
         $organizationId = (int) $attachable->organization_id;
+        if ($organizationId !== (int) $user->organization_id) {
+            throw new InvalidArgumentException('Attachment and uploader must belong to the same organization.');
+        }
         $directory = $this->directoryFor($attachable);
-        $path = $file->store($directory, Attachment::DISK_PUBLIC);
+        $path = $file->store("organizations/{$organizationId}/{$directory}", Attachment::DISK_PRIVATE);
+        if ($path === false) {
+            throw new RuntimeException('Attachment upload failed.');
+        }
 
-        return DB::transaction(function () use ($attachable, $user, $file, $organizationId, $path): Attachment {
-            return Attachment::create([
-                'organization_id' => $organizationId,
-                'uploaded_by_user_id' => $user->id,
-                'attachable_type' => $attachable::class,
-                'attachable_id' => $attachable->getKey(),
-                'original_name' => $file->getClientOriginalName(),
-                'stored_name' => basename($path),
-                'disk' => Attachment::DISK_PUBLIC,
-                'path' => $path,
-                'mime_type' => $file->getMimeType(),
-                'size_bytes' => $file->getSize() ?: 0,
-            ])->load(['uploadedBy']);
-        });
+        // Filesystems are not transactional: roll back the new file if DB persistence fails.
+        try {
+            return DB::transaction(function () use ($attachable, $user, $file, $organizationId, $path): Attachment {
+                return Attachment::create([
+                    'organization_id' => $organizationId,
+                    'uploaded_by_user_id' => $user->id,
+                    'attachable_type' => $attachable::class,
+                    'attachable_id' => $attachable->getKey(),
+                    'original_name' => $file->getClientOriginalName(),
+                    'stored_name' => basename($path),
+                    'disk' => Attachment::DISK_PRIVATE,
+                    'path' => $path,
+                    'mime_type' => $file->getMimeType(),
+                    'size_bytes' => $file->getSize() ?: 0,
+                ])->load(['uploadedBy']);
+            });
+        } catch (Throwable $exception) {
+            Storage::disk(Attachment::DISK_PRIVATE)->delete($path);
+            throw $exception;
+        }
     }
 
     public function delete(Attachment $attachment): void

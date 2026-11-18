@@ -525,7 +525,8 @@ GET    /api/v1/purchase-requests/{purchaseRequest}
 PATCH  /api/v1/purchase-requests/{purchaseRequest}
 DELETE /api/v1/purchase-requests/{purchaseRequest}
 POST   /api/v1/purchase-requests/{purchaseRequest}/submit
-GET    /api/v1/purchase-requests/{purchaseRequest}/comparison
+POST   /api/v1/purchase-requests/{purchaseRequest}/comparison  # generate / regenerate (201)
+GET    /api/v1/purchase-requests/{purchaseRequest}/comparison  # read saved, valid snapshot
 POST   /api/v1/purchase-requests/{purchaseRequest}/send-for-approval
 ```
 

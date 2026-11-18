@@ -23,7 +23,7 @@ class AttachmentApiTest extends TestCase
 
     public function test_requester_can_upload_attachment_to_own_purchase_request(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
 
         $organization = $this->createOrganization();
         $department = $this->createDepartment($organization);
@@ -46,12 +46,12 @@ class AttachmentApiTest extends TestCase
         $attachment = Attachment::firstOrFail();
 
         $this->assertSame(PurchaseRequest::class, $attachment->attachable_type);
-        Storage::disk('public')->assertExists($attachment->path);
+        Storage::disk('local')->assertExists($attachment->path);
     }
 
     public function test_procurement_can_upload_attachment_to_quote(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
 
         $organization = $this->createOrganization();
         $department = $this->createDepartment($organization);
@@ -82,12 +82,12 @@ class AttachmentApiTest extends TestCase
         $attachment = Attachment::firstOrFail();
 
         $this->assertSame(Quote::class, $attachment->attachable_type);
-        Storage::disk('public')->assertExists($attachment->path);
+        Storage::disk('local')->assertExists($attachment->path);
     }
 
     public function test_finance_can_upload_attachment_to_invoice(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
 
         $organization = $this->createOrganization();
         $department = $this->createDepartment($organization);
@@ -118,12 +118,12 @@ class AttachmentApiTest extends TestCase
         $attachment = Attachment::firstOrFail();
 
         $this->assertSame(Invoice::class, $attachment->attachable_type);
-        Storage::disk('public')->assertExists($attachment->path);
+        Storage::disk('local')->assertExists($attachment->path);
     }
 
     public function test_viewer_cannot_upload_attachment_to_quote(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
 
         $organization = $this->createOrganization();
         $department = $this->createDepartment($organization);
@@ -151,7 +151,7 @@ class AttachmentApiTest extends TestCase
 
     public function test_attachment_file_type_is_validated(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
 
         $organization = $this->createOrganization();
         $department = $this->createDepartment($organization);
@@ -172,7 +172,7 @@ class AttachmentApiTest extends TestCase
 
     public function test_authorized_user_can_view_attachment_metadata(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
 
         $organization = $this->createOrganization();
         $department = $this->createDepartment($organization);
@@ -191,7 +191,7 @@ class AttachmentApiTest extends TestCase
 
     public function test_user_cannot_view_attachment_from_another_organization(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
 
         $organization = $this->createOrganization();
         $foreignOrganization = $this->createOrganization('Hamburg External GmbH');
@@ -211,7 +211,7 @@ class AttachmentApiTest extends TestCase
 
     public function test_admin_can_list_organization_attachments(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
 
         $organization = $this->createOrganization();
         $department = $this->createDepartment($organization);
@@ -231,7 +231,7 @@ class AttachmentApiTest extends TestCase
 
     public function test_attachment_can_be_deleted_and_file_is_removed(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
 
         $organization = $this->createOrganization();
         $department = $this->createDepartment($organization);
@@ -240,7 +240,7 @@ class AttachmentApiTest extends TestCase
         $purchaseRequest = $this->createPurchaseRequest($organization, $department, $requester);
         $attachment = $this->createAttachment($organization, $requester, $purchaseRequest);
 
-        Storage::disk('public')->assertExists($attachment->path);
+        Storage::disk('local')->assertExists($attachment->path);
 
         Sanctum::actingAs($requester);
 
@@ -251,7 +251,7 @@ class AttachmentApiTest extends TestCase
             'id' => $attachment->id,
         ]);
 
-        Storage::disk('public')->assertMissing($attachment->path);
+        Storage::disk('local')->assertMissing($attachment->path);
     }
 
     private function createOrganization(string $name = 'Berlin Mittelstand GmbH'): Organization
@@ -374,7 +374,7 @@ class AttachmentApiTest extends TestCase
     ): Attachment {
         $path = UploadedFile::fake()
             ->create('document.pdf', 128, 'application/pdf')
-            ->store('attachments/purchase-request/'.$purchaseRequest->id, 'public');
+            ->store('attachments/purchase-request/'.$purchaseRequest->id, 'local');
 
         return Attachment::create([
             'organization_id' => $organization->id,
@@ -383,7 +383,7 @@ class AttachmentApiTest extends TestCase
             'attachable_id' => $purchaseRequest->id,
             'original_name' => 'document.pdf',
             'stored_name' => basename($path),
-            'disk' => 'public',
+            'disk' => 'local',
             'path' => $path,
             'mime_type' => 'application/pdf',
             'size_bytes' => 128 * 1024,

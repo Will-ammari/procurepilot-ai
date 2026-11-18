@@ -128,9 +128,20 @@ class QuoteService
             }
 
             $quote->update($quoteData);
+            $termsChanged = $quote->wasChanged([
+                'total_amount', 'currency', 'delivery_days', 'payment_terms',
+                'warranty_months', 'valid_until', 'notes', 'status',
+            ]) || is_array($items);
 
             if (is_array($items)) {
                 $this->replaceItems($quote, $items);
+            }
+
+            if ($termsChanged) {
+                $quote->analysis()->delete();
+                if ($quote->status !== Quote::STATUS_DRAFT) {
+                    $quote->update(['status' => Quote::STATUS_RECEIVED]);
+                }
             }
 
             return $quote->fresh(['purchaseRequest', 'vendor', 'items']);

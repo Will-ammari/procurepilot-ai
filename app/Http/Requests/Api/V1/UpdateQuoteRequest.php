@@ -40,8 +40,6 @@ class UpdateQuoteRequest extends FormRequest
                 Rule::in([
                     Quote::STATUS_DRAFT,
                     Quote::STATUS_RECEIVED,
-                    Quote::STATUS_ANALYSIS_PENDING,
-                    Quote::STATUS_ANALYZED,
                 ]),
             ],
 

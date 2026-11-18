@@ -143,7 +143,13 @@ class PurchaseRequest extends Model
      */
     public function invoice(): HasOne
     {
+        // Backwards-compatible convenience relation; use invoices() for reconciliation.
         return $this->hasOne(Invoice::class);
+    }
+
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
     }
 
     /**

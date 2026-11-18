@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
     Route::get('/health', HealthCheckController::class)->name('health.show');
-    Route::post('/auth/login', [AuthController::class, 'login']);
+    Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:login');
 
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/me', [AuthController::class, 'me']);
@@ -52,6 +52,11 @@ Route::prefix('v1')->group(function (): void {
             '/purchase-requests/{purchaseRequest}/comparison',
             [QuoteComparisonController::class, 'show']
         )->name('purchase-requests.comparison.show');
+
+        Route::post(
+            '/purchase-requests/{purchaseRequest}/comparison',
+            [QuoteComparisonController::class, 'generate']
+        )->name('purchase-requests.comparison.generate');
 
         Route::post(
             '/purchase-requests/{purchaseRequest}/send-for-approval',

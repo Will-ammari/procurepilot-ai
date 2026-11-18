@@ -10,6 +10,7 @@ use App\Models\Quote;
 use App\Models\QuoteComparison;
 use App\Models\User;
 use App\Models\Vendor;
+use App\Services\Procurement\QuoteComparisonSnapshot;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\Sanctum;
@@ -351,6 +352,7 @@ class ApprovalWorkflowApiTest extends TestCase
             'recommended_quote_id' => $quote->id,
             'generated_by_user_id' => $generatedBy->id,
             'currency' => 'EUR',
+            'snapshot_hash' => app(QuoteComparisonSnapshot::class)->forPurchaseRequest($purchaseRequest),
             'reason' => 'Best overall offer based on price, delivery, payment terms, and warranty.',
             'quotes' => [
                 [

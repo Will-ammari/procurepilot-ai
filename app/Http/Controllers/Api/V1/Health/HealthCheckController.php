@@ -16,10 +16,12 @@ class HealthCheckController extends Controller
         return response()->json([
             'data' => [
                 'service' => config('app.name', 'ProcurePilot AI'),
-                'environment' => app()->environment(),
                 'status' => $result['status'],
                 'checked_at' => now()->toISOString(),
-                'checks' => $result['checks'],
+                // The public endpoint exposes availability, not connection internals.
+                'checks' => collect($result['checks'])->map(
+                    static fn (array $check): array => ['status' => $check['status']]
+                )->all(),
             ],
         ], $result['status'] === 'ok'
             ? Response::HTTP_OK

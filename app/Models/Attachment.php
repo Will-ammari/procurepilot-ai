@@ -11,7 +11,9 @@ class Attachment extends Model
 {
     use HasFactory;
 
-    public const DISK_PUBLIC = 'public';
+    public const DISK_PUBLIC = 'public'; // Legacy records only; migrate before production.
+
+    public const DISK_PRIVATE = 'local';
 
     protected $fillable = [
         'organization_id',

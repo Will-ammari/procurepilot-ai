@@ -5,6 +5,7 @@ namespace App\Services\Procurement;
 use App\Models\ActivityLog;
 use App\Models\PurchaseRequest;
 use App\Models\Quote;
+use App\Models\QuoteAnalysis;
 use App\Models\QuoteComparison;
 use App\Models\User;
 use App\Services\Support\ActivityLogService;
@@ -15,7 +16,8 @@ use Illuminate\Validation\ValidationException;
 class QuoteComparisonService
 {
     public function __construct(
-        private readonly ActivityLogService $activityLogService
+        private readonly ActivityLogService $activityLogService,
+        private readonly QuoteComparisonSnapshot $snapshot
     ) {}
 
     private const WEIGHTS = [
@@ -56,6 +58,16 @@ class QuoteComparisonService
                 ]);
             }
 
+            // Never rank nominal amounts from different currencies as if they were equivalent.
+            if ($quotes->contains(
+                fn (Quote $quote): bool => strtoupper($quote->currency) !== strtoupper($purchaseRequest->currency)
+            )) {
+                throw ValidationException::withMessages([
+                    'currency' => ['All comparable quotes must use the purchase request currency. Convert external quotes with an approved FX rate before comparing.'],
+                ]);
+            }
+
+            $snapshotHash = $this->snapshot->forQuotes($purchaseRequest->quotes);
             $scoredQuotes = $this->scoreQuotes($quotes);
             $recommended = $scoredQuotes->sortByDesc('score')->first();
 
@@ -66,6 +78,7 @@ class QuoteComparisonService
                 'generated_by_user_id' => $user->id,
                 'currency' => $purchaseRequest->currency,
                 'reason' => $this->buildReason($recommended, $scoredQuotes),
+                'snapshot_hash' => $snapshotHash,
                 'quotes' => $scoredQuotes->values()->all(),
                 'weights' => self::WEIGHTS,
             ]);
@@ -94,6 +107,24 @@ class QuoteComparisonService
                 'generatedBy',
             ]);
         });
+    }
+
+    public function latest(PurchaseRequest $purchaseRequest): QuoteComparison
+    {
+        $comparison = $purchaseRequest->quoteComparisons()->latest('id')->first();
+        if (! $comparison instanceof QuoteComparison) {
+            throw ValidationException::withMessages([
+                'comparison' => ['Generate a comparison before requesting its results.'],
+            ]);
+        }
+
+        if (! $this->snapshot->matches($purchaseRequest, $comparison->snapshot_hash)) {
+            throw ValidationException::withMessages([
+                'comparison' => ['The saved comparison is outdated. Generate a new comparison.'],
+            ]);
+        }
+
+        return $comparison->load(['recommendedQuote.vendor', 'purchaseRequest', 'generatedBy']);
     }
 
     private function scoreQuotes(Collection $quotes): Collection
@@ -132,7 +163,9 @@ class QuoteComparisonService
                     weight: self::WEIGHTS['warranty_months']
                 ),
 
-                'hidden_costs' => $this->hiddenCostsScore($hiddenCosts),
+                'hidden_costs' => $quote->analysis?->status === QuoteAnalysis::STATUS_COMPLETED
+                    ? $this->hiddenCostsScore($hiddenCosts)
+                    : 0.00,
 
                 'vendor_status' => $this->vendorStatusScore($quote),
             ];
@@ -149,6 +182,7 @@ class QuoteComparisonService
                 'payment_terms' => $quote->payment_terms,
                 'warranty_months' => $quote->warranty_months,
                 'hidden_costs' => array_values($hiddenCosts),
+                'analysis_status' => $quote->analysis->status ?? 'not_analyzed',
                 'risk_notes' => array_values($riskNotes),
                 'score' => $score,
                 'breakdown' => $breakdown,
@@ -231,6 +265,10 @@ class QuoteComparisonService
 
         if ($riskNotes !== []) {
             $parts[] = 'commercial terms require review';
+        }
+
+        if ($quote->analysis?->status !== QuoteAnalysis::STATUS_COMPLETED) {
+            $parts[] = 'hidden-cost assessment not available';
         }
 
         return implode('; ', $parts).'.';

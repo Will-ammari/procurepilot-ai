@@ -67,6 +67,7 @@ class InvoiceService
 
             $this->ensurePurchaseRequestCanReceiveInvoice($purchaseRequest);
             $this->ensureVendorMatchesApprovedQuote($purchaseRequest, $vendor);
+            $this->ensureInvoiceCurrencyMatchesRequest($purchaseRequest, $data['currency'] ?? null);
 
             $financials = $this->calculateFinancials(
                 subtotal: (float) $data['subtotal'],
@@ -122,7 +123,7 @@ class InvoiceService
     {
         return DB::transaction(function () use ($invoice, $data): Invoice {
             // Parent first, invoice second: consistent with markPaid() and create().
-            PurchaseRequest::query()->lockForUpdate()->findOrFail($invoice->purchase_request_id);
+            $purchaseRequest = PurchaseRequest::query()->lockForUpdate()->findOrFail($invoice->purchase_request_id);
             $invoice = Invoice::query()->lockForUpdate()->findOrFail($invoice->id);
 
             if ($invoice->isPaid() || $invoice->isCancelled()) {
@@ -140,6 +141,7 @@ class InvoiceService
                 : (float) $invoice->vat_rate;
 
             $financials = $this->calculateFinancials($subtotal, $vatRate);
+            $this->ensureInvoiceCurrencyMatchesRequest($purchaseRequest, $data['currency'] ?? $invoice->currency);
 
             $invoice->update([
                 'invoice_number' => $data['invoice_number'] ?? $invoice->invoice_number,
@@ -153,6 +155,8 @@ class InvoiceService
                 'status' => $data['status'] ?? $invoice->status,
                 'notes' => array_key_exists('notes', $data) ? $data['notes'] : $invoice->notes,
             ]);
+
+            $this->reconcilePurchaseRequestPaymentStatus($purchaseRequest);
 
             return $invoice->load(['vendor', 'purchaseRequest']);
         });
@@ -181,9 +185,7 @@ class InvoiceService
                 'paid_at' => now(),
             ]);
 
-            $purchaseRequest->update([
-                'status' => PurchaseRequest::STATUS_PAID,
-            ]);
+            $this->reconcilePurchaseRequestPaymentStatus($purchaseRequest);
 
             $this->activityLogService->log(
                 event: ActivityLog::EVENT_INVOICE_PAID,
@@ -201,6 +203,35 @@ class InvoiceService
 
             return $invoice->load(['vendor', 'purchaseRequest']);
         });
+    }
+
+    /**
+     * Invoice writes serialize on the parent request row. A request is paid only
+     * when at least one invoice is paid and no active invoice remains unpaid.
+     */
+    private function reconcilePurchaseRequestPaymentStatus(PurchaseRequest $purchaseRequest): void
+    {
+        $active = $purchaseRequest->invoices()->where('status', '!=', Invoice::STATUS_CANCELLED);
+        $hasPaid = (clone $active)->where('status', Invoice::STATUS_PAID)->exists();
+        $hasUnpaid = (clone $active)->where('status', '!=', Invoice::STATUS_PAID)->exists();
+
+        $status = $hasPaid && ! $hasUnpaid
+            ? PurchaseRequest::STATUS_PAID
+            : PurchaseRequest::STATUS_INVOICED;
+
+        if ($purchaseRequest->status !== $status) {
+            $purchaseRequest->update(['status' => $status]);
+        }
+    }
+
+    private function ensureInvoiceCurrencyMatchesRequest(PurchaseRequest $purchaseRequest, ?string $currency): void
+    {
+        $invoiceCurrency = strtoupper($currency ?? $purchaseRequest->currency);
+        if ($invoiceCurrency !== strtoupper($purchaseRequest->currency)) {
+            throw ValidationException::withMessages([
+                'currency' => ['Invoice currency must match the purchase request currency. FX conversion is not implemented.'],
+            ]);
+        }
     }
 
     private function calculateFinancials(float $subtotal, float $vatRate): array

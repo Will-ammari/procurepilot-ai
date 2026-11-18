@@ -17,6 +17,7 @@ class QuoteComparison extends Model
         'generated_by_user_id',
         'currency',
         'reason',
+        'snapshot_hash',
         'quotes',
         'weights',
     ];

@@ -18,6 +18,15 @@ class QuoteAnalysisApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // These assertions exercise the local deterministic analyzer only.
+        // Do not let a developer's enabled FastAPI integration make this suite nondeterministic.
+        config()->set('services.ai.enabled', false);
+    }
+
     public function test_procurement_can_analyze_quote(): void
     {
         $organization = $this->createOrganization();

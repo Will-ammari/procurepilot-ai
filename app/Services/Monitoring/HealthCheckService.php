@@ -4,6 +4,7 @@ namespace App\Services\Monitoring;
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
 use Throwable;
 
@@ -125,9 +126,13 @@ class HealthCheckService
     /** @return array{status: string, message: string} */
     private function failed(Throwable $exception): array
     {
+        Log::warning('Health dependency check failed.', [
+            'exception_class' => $exception::class,
+        ]);
+
         return [
             'status' => 'failed',
-            'message' => $exception->getMessage(),
+            'message' => 'Dependency unavailable.',
         ];
     }
 }

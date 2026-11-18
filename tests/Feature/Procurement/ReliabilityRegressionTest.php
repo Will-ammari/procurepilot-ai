@@ -12,9 +12,11 @@ use App\Models\QuoteComparison;
 use App\Services\Procurement\ApprovalWorkflowService;
 use App\Services\Procurement\InvoiceService;
 use App\Services\Procurement\PurchaseRequestService;
+use App\Services\Procurement\QuoteComparisonSnapshot;
 use App\Services\Support\ActivityLogService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
+use LogicException;
 use Tests\Support\ProcurementTestScenario;
 use Tests\TestCase;
 
@@ -29,8 +31,8 @@ class ReliabilityRegressionTest extends TestCase
         $workflow = app(ApprovalWorkflowService::class);
         $step = $workflow->sendForApproval($request, $scenario->procurement)->first();
 
-        if (! $step instanceof ApprovalStep) {
-            throw new \LogicException('Expected the approval workflow to return an approval step.');
+        if (! ($step instanceof ApprovalStep)) {
+            throw new LogicException('Expected the approval workflow to return an approval step.');
         }
 
         $staleStep = ApprovalStep::findOrFail($step->id);
@@ -152,6 +154,7 @@ class ReliabilityRegressionTest extends TestCase
             'recommended_quote_id' => $quote->id,
             'generated_by_user_id' => $scenario->procurement->id,
             'currency' => 'EUR',
+            'snapshot_hash' => app(QuoteComparisonSnapshot::class)->forPurchaseRequest($request),
             'reason' => 'Best overall bid',
             'quotes' => [['quote_id' => $quote->id]],
             'weights' => ['total_amount' => 35],

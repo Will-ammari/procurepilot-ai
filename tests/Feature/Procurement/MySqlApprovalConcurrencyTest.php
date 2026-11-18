@@ -8,7 +8,10 @@ use App\Models\PurchaseRequest;
 use App\Models\Quote;
 use App\Models\QuoteComparison;
 use App\Services\Procurement\ApprovalWorkflowService;
+use App\Services\Procurement\QuoteComparisonSnapshot;
 use Illuminate\Support\Facades\DB;
+use LogicException;
+use RuntimeException;
 use Symfony\Component\Process\Process;
 use Tests\Support\ProcurementTestScenario;
 use Tests\TestCase;
@@ -53,6 +56,7 @@ class MySqlApprovalConcurrencyTest extends TestCase
             'recommended_quote_id' => $quote->id,
             'generated_by_user_id' => $scenario->procurement->id,
             'currency' => 'EUR',
+            'snapshot_hash' => app(QuoteComparisonSnapshot::class)->forPurchaseRequest($request),
             'reason' => 'Recommended quote',
             'quotes' => [['quote_id' => $quote->id]],
             'weights' => ['total_amount' => 35],
@@ -62,8 +66,8 @@ class MySqlApprovalConcurrencyTest extends TestCase
             ->sendForApproval($request, $scenario->procurement)
             ->first();
 
-        if (! $step instanceof ApprovalStep) {
-            throw new \LogicException('Expected the approval workflow to return an approval step.');
+        if (! ($step instanceof ApprovalStep)) {
+            throw new LogicException('Expected the approval workflow to return an approval step.');
         }
 
         $environment = [
@@ -85,7 +89,7 @@ class MySqlApprovalConcurrencyTest extends TestCase
         foreach (['approve', 'reject'] as $action) {
             $readyFile = tempnam(sys_get_temp_dir(), 'approval-ready-');
             if ($readyFile === false) {
-                throw new \RuntimeException('Could not create process coordination file.');
+                throw new RuntimeException('Could not create process coordination file.');
             }
             unlink($readyFile);
             $readyFiles[] = $readyFile;

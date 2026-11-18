@@ -22,6 +22,7 @@ class QuoteComparisonResource extends JsonResource
             'generated_by_user_id' => $this->generated_by_user_id,
             'currency' => $this->currency,
             'reason' => $this->reason,
+            'snapshot_hash' => $this->snapshot_hash,
             'weights' => $this->weights,
             'quotes' => $this->quotes,
             'recommended_quote' => new QuoteResource($this->whenLoaded('recommendedQuote')),

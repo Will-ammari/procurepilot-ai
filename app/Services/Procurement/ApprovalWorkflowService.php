@@ -16,7 +16,8 @@ use Illuminate\Validation\ValidationException;
 class ApprovalWorkflowService
 {
     public function __construct(
-        private readonly ActivityLogService $activityLogService
+        private readonly ActivityLogService $activityLogService,
+        private readonly QuoteComparisonSnapshot $snapshot
     ) {}
 
     public function sendForApproval(PurchaseRequest $purchaseRequest, User $user): Collection
@@ -40,12 +41,18 @@ class ApprovalWorkflowService
 
             $comparison = QuoteComparison::query()
                 ->where('purchase_request_id', $purchaseRequest->id)
-                ->latest()
+                ->latest('id')
                 ->first();
 
             if (! $comparison instanceof QuoteComparison || $comparison->recommended_quote_id === null) {
                 throw ValidationException::withMessages([
                     'comparison' => ['A quote comparison with a recommended quote is required before approval.'],
+                ]);
+            }
+
+            if (! $this->snapshot->matches($purchaseRequest, $comparison->snapshot_hash)) {
+                throw ValidationException::withMessages([
+                    'comparison' => ['The comparison no longer matches the quotes. Generate it again before approval.'],
                 ]);
             }
 
@@ -264,7 +271,7 @@ class ApprovalWorkflowService
 
         $comparison = QuoteComparison::query()
             ->where('purchase_request_id', $purchaseRequest->id)
-            ->latest()
+            ->latest('id')
             ->first();
 
         $purchaseRequest->update([

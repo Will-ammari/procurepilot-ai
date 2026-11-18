@@ -58,10 +58,10 @@ class QuoteComparisonApiTest extends TestCase
 
         Sanctum::actingAs($procurement);
 
-        $response = $this->getJson("/api/v1/purchase-requests/{$purchaseRequest->id}/comparison");
+        $response = $this->postJson("/api/v1/purchase-requests/{$purchaseRequest->id}/comparison");
 
         $response
-            ->assertOk()
+            ->assertCreated()
             ->assertJsonPath('data.purchase_request_id', $purchaseRequest->id)
             ->assertJsonPath('data.recommended_quote_id', $secondQuote->id)
             ->assertJsonPath('data.recommended_vendor', 'Schneider Bürobedarf GmbH')
@@ -91,7 +91,7 @@ class QuoteComparisonApiTest extends TestCase
 
         Sanctum::actingAs($procurement);
 
-        $this->getJson("/api/v1/purchase-requests/{$purchaseRequest->id}/comparison")
+        $this->postJson("/api/v1/purchase-requests/{$purchaseRequest->id}/comparison")
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['quotes']);
     }
@@ -108,7 +108,7 @@ class QuoteComparisonApiTest extends TestCase
 
         Sanctum::actingAs($requester);
 
-        $this->getJson("/api/v1/purchase-requests/{$purchaseRequest->id}/comparison")
+        $this->postJson("/api/v1/purchase-requests/{$purchaseRequest->id}/comparison")
             ->assertForbidden();
     }
 
@@ -127,7 +127,7 @@ class QuoteComparisonApiTest extends TestCase
 
         Sanctum::actingAs($procurement);
 
-        $this->getJson("/api/v1/purchase-requests/{$foreignPurchaseRequest->id}/comparison")
+        $this->postJson("/api/v1/purchase-requests/{$foreignPurchaseRequest->id}/comparison")
             ->assertForbidden();
     }
 

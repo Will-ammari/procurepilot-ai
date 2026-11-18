@@ -10,6 +10,7 @@ RUN apk add --no-cache \
     icu-dev \
     libzip-dev \
     oniguruma-dev \
+    sqlite-dev \
     mysql-client \
     $PHPIZE_DEPS
 
@@ -19,6 +20,7 @@ RUN docker-php-ext-install \
     mbstring \
     pdo \
     pdo_mysql \
+    pdo_sqlite \
     zip
 
 RUN pecl install redis \
