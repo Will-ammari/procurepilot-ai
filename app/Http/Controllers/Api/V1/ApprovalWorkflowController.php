@@ -17,6 +17,20 @@ class ApprovalWorkflowController extends Controller
         private readonly ApprovalWorkflowService $approvalWorkflowService
     ) {}
 
+    public function indexForPurchaseRequest(PurchaseRequest $purchaseRequest): AnonymousResourceCollection
+    {
+        // A purchase-request policy enforces organization and requester/department visibility.
+        $this->authorize('view', $purchaseRequest);
+
+        return ApprovalStepResource::collection(
+            $purchaseRequest->approvalSteps()
+                ->with(['approver', 'decidedBy'])
+                ->orderBy('sequence')
+                ->orderBy('id')
+                ->get()
+        );
+    }
+
     public function sendForApproval(PurchaseRequest $purchaseRequest): AnonymousResourceCollection
     {
         $this->authorize('sendForApproval', $purchaseRequest);

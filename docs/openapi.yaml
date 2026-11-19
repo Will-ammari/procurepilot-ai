@@ -561,12 +561,12 @@ paths:
     get:
       tags:
       - Quote Comparison
-      summary: Generate quote comparison and recommended quote
+      summary: Retrieve latest existing quote comparison (does not generate a new one)
       parameters:
       - $ref: '#/components/parameters/PurchaseRequestId'
       responses:
         '200':
-          description: Quote comparison generated
+          description: Latest quote comparison
           content:
             application/json:
               schema:
@@ -575,6 +575,46 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '422':
           $ref: '#/components/responses/ValidationError'
+    post:
+      tags:
+      - Quote Comparison
+      summary: Generate a quote comparison and recommendation
+      parameters:
+      - $ref: '#/components/parameters/PurchaseRequestId'
+      responses:
+        '201':
+          description: Comparison generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuoteComparisonResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /purchase-requests/{purchaseRequest}/approval-steps:
+    get:
+      tags:
+      - Approval Workflow
+      summary: List approval steps in sequence for a visible purchase request
+      parameters:
+      - $ref: '#/components/parameters/PurchaseRequestId'
+      responses:
+        '200':
+          description: Ordered approval steps
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ApprovalStep'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /purchase-requests/{purchaseRequest}/send-for-approval:
     post:
       tags:
@@ -583,7 +623,7 @@ paths:
       parameters:
       - $ref: '#/components/parameters/PurchaseRequestId'
       responses:
-        '201':
+        '200':
           description: Approval steps created
           content:
             application/json:

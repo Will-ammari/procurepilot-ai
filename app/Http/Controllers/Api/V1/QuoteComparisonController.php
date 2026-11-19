@@ -17,7 +17,8 @@ class QuoteComparisonController extends Controller
 
     public function show(PurchaseRequest $purchaseRequest): JsonResponse
     {
-        $this->authorize('compareQuotes', $purchaseRequest);
+        // Reading a recorded decision is not the same permission as generating one.
+        $this->authorize('view', $purchaseRequest);
 
         $comparison = $this->comparisons->latest($purchaseRequest);
 

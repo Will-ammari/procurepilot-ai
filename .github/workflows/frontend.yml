@@ -1,0 +1,52 @@
+name: React frontend checks
+on:
+  push:
+    paths:
+      - 'frontend/**'
+      - 'routes/api.php'
+      - 'app/Http/Controllers/Api/V1/ApprovalWorkflowController.php'
+      - 'app/Http/Controllers/Api/V1/QuoteComparisonController.php'
+      - '.github/workflows/frontend.yml'
+  pull_request:
+    paths:
+      - 'frontend/**'
+      - 'routes/api.php'
+      - 'app/Http/Controllers/Api/V1/ApprovalWorkflowController.php'
+      - 'app/Http/Controllers/Api/V1/QuoteComparisonController.php'
+      - '.github/workflows/frontend.yml'
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install from lockfile
+        run: npm ci
+      - name: Type check
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm run test
+      - name: Production build + bundle evidence
+        run: npm run build
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Browser E2E tests (isolated simulated demo)
+        run: npm run test:e2e
+      - name: Upload E2E failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-e2e-report
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+          retention-days: 7
+          if-no-files-found: ignore

@@ -1,0 +1,44 @@
+{
+  "name": "procurepilot-frontend",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --config vite.config.ts --host 127.0.0.1",
+    "build": "npm run typecheck && npm run check:overlay && vite build --config vite.config.ts && npm run analyze:bundle",
+    "preview": "vite preview --config vite.config.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.app.json",
+    "test": "vitest run --config vitest.config.ts",
+    "test:watch": "vitest --config vitest.config.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:list": "playwright test --list",
+    "analyze:bundle": "node scripts/report-bundle.mjs",
+    "check:overlay": "node scripts/check-overlay.mjs",
+    "predev": "npm run check:overlay",
+    "check:shadowed": "node scripts/shadowed-sources.mjs",
+    "clean:shadowed": "node scripts/shadowed-sources.mjs --quarantine",
+    "test:tooling": "node --test scripts/shadowed-sources.test.mjs"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
+    "@tanstack/react-query": "^5.90.0",
+    "axios": "^1.12.0",
+    "lucide-react": "^0.468.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-hook-form": "^7.62.0",
+    "react-router-dom": "^7.9.0",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitejs/plugin-react": "^4.7.0",
+    "typescript": "~5.8.3",
+    "vite": "^6.3.0",
+    "vitest": "5.1.1",
+    "@playwright/test": "^1.56.0"
+  }
+}

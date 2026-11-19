@@ -58,6 +58,11 @@ Route::prefix('v1')->group(function (): void {
             [QuoteComparisonController::class, 'generate']
         )->name('purchase-requests.comparison.generate');
 
+        Route::get(
+            '/purchase-requests/{purchaseRequest}/approval-steps',
+            [ApprovalWorkflowController::class, 'indexForPurchaseRequest']
+        )->name('purchase-requests.approval-steps.index');
+
         Route::post(
             '/purchase-requests/{purchaseRequest}/send-for-approval',
             [ApprovalWorkflowController::class, 'sendForApproval']
