@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --config vite.config.ts --host 127.0.0.1",
-    "build": "npm run typecheck && npm run check:overlay && vite build --config vite.config.ts && npm run analyze:bundle",
+    "build": "npm run typecheck && npm run check:overlay && vite build --config vite.config.ts && npm run verify:public && npm run analyze:bundle",
     "preview": "vite preview --config vite.config.ts",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "test": "vitest run --config vitest.config.ts",
@@ -18,11 +18,12 @@
     "predev": "npm run check:overlay",
     "check:shadowed": "node scripts/shadowed-sources.mjs",
     "clean:shadowed": "node scripts/shadowed-sources.mjs --quarantine",
-    "test:tooling": "node --test scripts/shadowed-sources.test.mjs scripts/contrast-tokens.test.mjs",
+    "test:tooling": "node --test scripts/shadowed-sources.test.mjs scripts/contrast-tokens.test.mjs scripts/site-discovery.test.mjs",
     "lint": "eslint src e2e",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"e2e/**/*.ts\" \"*.{ts,mjs,json}\" \"docs/**/*.md\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"e2e/**/*.ts\" \"*.{ts,mjs,json}\" \"docs/**/*.md\"",
-    "test:a11y": "playwright test e2e/session-accessibility.spec.ts"
+    "test:a11y": "playwright test e2e/session-accessibility.spec.ts",
+    "verify:public": "node scripts/verify-site-assets.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

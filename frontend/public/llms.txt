@@ -1,0 +1,21 @@
+# ProcurePilot AI
+
+> An interactive, simulated procurement workflow demo and open-source engineering portfolio. This public site does not expose a live Laravel API, live supplier data, payments, MCP services or autonomous purchasing actions.
+
+The public demo runs React/TypeScript in Vercel; its purchase requests, supplier quotes, approvals and invoice examples are browser-local synthetic records. Access to a live tenant database is not provided by this site.
+
+## Pages
+
+- [Interactive demo](https://procurepilot-ai-nine.vercel.app/): landing/login and browser-local workspace.
+- [Engineering overview](https://procurepilot-ai-nine.vercel.app/engineering): publicly accessible source-based architecture summary.
+
+## Technical documentation
+
+- [GitHub README](https://github.com/Will-ammari/procurepilot-ai#readme): purpose, setup, scope and known limitations.
+- [Engineering case study](https://github.com/Will-ammari/procurepilot-ai/blob/main/docs/engineering-case-study.md): outbox, idempotency, row locking, tenant isolation and trade-offs.
+- [Performance evidence](https://github.com/Will-ammari/procurepilot-ai/blob/main/docs/performance-lighthouse.md): PageSpeed scores and their limitations.
+- [API contract](https://github.com/Will-ammari/procurepilot-ai/blob/main/docs/openapi.yaml): backend specification; the API is not available on the public Vercel domain.
+
+## Usage boundaries
+
+No real user, customer or supplier data is supplied by this demo. Demo role changes are not backend authorization, and the FastAPI mock/fallback does not represent a measured trained AI model.

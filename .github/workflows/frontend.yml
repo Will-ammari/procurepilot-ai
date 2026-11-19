@@ -38,6 +38,8 @@ jobs:
         run: npm run lint
       - name: Prettier formatting gate
         run: npm run format:check
+      - name: Frontend tooling and public metadata tests
+        run: npm run test:tooling
       - name: Production build + bundle evidence
         run: npm run build
       - name: Install Playwright Chromium

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import {
   ArrowLeft,
   ExternalLink,
@@ -37,6 +38,20 @@ const decisions = [
   },
 ];
 export function EngineeringPage() {
+  useEffect(() => {
+    const previousTitle = document.title;
+    const canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    const previousCanonical = canonical?.getAttribute('href');
+
+    document.title = 'Engineering case study | ProcurePilot AI';
+    canonical?.setAttribute('href', 'https://procurepilot-ai-nine.vercel.app/engineering');
+
+    return () => {
+      document.title = previousTitle;
+      if (previousCanonical) canonical?.setAttribute('href', previousCanonical);
+    };
+  }, []);
+
   return (
     <main className="engineering-page">
       <div className="engineering-container">
@@ -88,6 +103,13 @@ export function EngineeringPage() {
             </a>
             <a href={`${source}/tree/main/frontend/e2e`} target="_blank" rel="noopener noreferrer">
               Browser tests <ExternalLink size={15} />
+            </a>
+            <a
+              href={`${source}/blob/main/docs/engineering-case-study.md`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Full engineering case study <ExternalLink size={15} />
             </a>
           </div>
         </section>

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://procurepilot-ai-nine.vercel.app/sitemap.xml
