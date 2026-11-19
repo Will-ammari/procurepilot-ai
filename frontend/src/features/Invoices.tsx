@@ -1,15 +1,272 @@
-import {useMemo,useState} from 'react';
-import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query';
-import {CheckCircle2,FilePlus,Plus} from 'lucide-react';
-import {useAuth} from '../app/App';
-import {canCreateInvoice,canMarkPaid} from '../domain/policy';
-import {date,money} from '../domain/format';
-import {repo} from '../services/repository';
-import {Button,Empty,ErrorState,Field,Loading,Modal,Notice,PageHeading,Panel,SearchInput,Status,Table,PaginationNote} from '../components/UI';
-export function Invoices(){const {user}=useAuth(),qc=useQueryClient();const [search,setSearch]=useState(''),[open,setOpen]=useState(false);const [form,setForm]=useState({purchase_request_id:'',vendor_id:'',invoice_number:'',invoice_date:new Date().toISOString().slice(0,10),due_date:'',subtotal:'',vat_rate:'19',notes:''});const invoices=useQuery({queryKey:['invoices',user.id],queryFn:()=>repo.invoices(user)});const vendors=useQuery({queryKey:['vendors',user.id],queryFn:()=>repo.vendors(user),enabled:open});const requests=useQuery({queryKey:['requests','invoice-form',user.id],queryFn:()=>repo.requests(user),enabled:open});
- const create=useMutation({mutationFn:()=>repo.createInvoice(user,{purchase_request_id:Number(form.purchase_request_id),vendor_id:Number(form.vendor_id),invoice_number:form.invoice_number,invoice_date:form.invoice_date,due_date:form.due_date||null,subtotal:Number(form.subtotal),vat_rate:Number(form.vat_rate),currency:'EUR',notes:form.notes}),onSuccess:async()=>{await Promise.all([qc.invalidateQueries({queryKey:['invoices']}),qc.invalidateQueries({queryKey:['requests']})]);setOpen(false);}});
- const pay=useMutation({mutationFn:(id:number)=>repo.payInvoice(user,id),onSuccess:async()=>{await Promise.all([qc.invalidateQueries({queryKey:['invoices']}),qc.invalidateQueries({queryKey:['requests']})]);}});
- const rows=useMemo(()=>invoices.data?.data.filter(i=>`${i.invoice_number} ${i.vendor?.name??''}`.toLowerCase().includes(search.toLowerCase()))||[],[invoices.data,search]);return <><PageHeading eyebrow="FINANCE OPERATIONS" title="Invoices" description="Track supplier invoices, tax calculations and payment status." action={canCreateInvoice(user.role)?<Button onClick={()=>setOpen(true)}><Plus size={17}/> New invoice</Button>:undefined}/><Panel title="Invoice register" subtitle="All accessible supplier invoices"><div className="list-toolbar"><SearchInput value={search} onChange={setSearch} placeholder="Search invoice numbers…"/><span className="list-count">{rows.length} invoices</span></div>{invoices.isPending?<Loading/>:invoices.isError?<ErrorState error={invoices.error} onRetry={()=>invoices.refetch()}/>:rows.length?<><Table head={['INVOICE','VENDOR','ISSUED','TOTAL','STATUS','ACTION']}>
- {rows.map(i=><tr key={i.id}><td><div className="cell-title">{i.invoice_number}</div><span className="cell-muted">REQ-{String(i.purchase_request_id).padStart(4,'0')}</span></td><td>{i.vendor?.name||`Vendor #${i.vendor_id}`}</td><td className="cell-muted">{date(i.invoice_date)}</td><td className="weight-medium">{money(i.total,i.currency)}</td><td><Status value={i.status}/></td><td>{canMarkPaid(user.role)&&i.status!=='paid'&&i.status!=='cancelled'?<Button variant="ghost" disabled={pay.isPending} onClick={()=>{if(window.confirm(`Mark invoice ${i.invoice_number} as paid?`))pay.mutate(i.id);}}><CheckCircle2 size={15}/> Mark paid</Button>:<span className="cell-muted">—</span>}</td></tr>)}</Table><PaginationNote shown={rows.length} total={invoices.data?.meta?.total??rows.length}/></>:<Empty title="No invoices found" detail="New invoices appear here when added."/>}{pay.isError&&<Notice tone="danger">{pay.error.message}</Notice>}</Panel>
- {open&&<Modal title="Create invoice" onClose={()=>setOpen(false)}><form className="stack-md" onSubmit={e=>{e.preventDefault();create.mutate();}}><Field label="Invoice number" required><input required maxLength={100} value={form.invoice_number} onChange={e=>setForm({...form,invoice_number:e.target.value})} placeholder="INV-2026-0001"/></Field><div className="form-row"><Field label="Purchase request" required><select required value={form.purchase_request_id} onChange={e=>setForm({...form,purchase_request_id:e.target.value})}><option value="">Select request</option>{requests.data?.data.filter(r=>['approved','ordered','invoiced'].includes(r.status)).map(r=><option key={r.id} value={r.id}>{r.title}</option>)}</select></Field><Field label="Supplier" required hint="When a request has an approved quote, use the matching vendor."><select required value={form.vendor_id} onChange={e=>setForm({...form,vendor_id:e.target.value})}><option value="">Select supplier</option>{vendors.data?.data.map(v=><option key={v.id} value={v.id}>{v.name}</option>)}</select></Field></div><div className="form-row"><Field label="Issued on" required><input required type="date" value={form.invoice_date} onChange={e=>setForm({...form,invoice_date:e.target.value})}/></Field><Field label="Due date"><input type="date" min={form.invoice_date} value={form.due_date} onChange={e=>setForm({...form,due_date:e.target.value})}/></Field></div><div className="form-row"><Field label="Subtotal (€)" required><input required min="0.01" step="0.01" type="number" value={form.subtotal} onChange={e=>setForm({...form,subtotal:e.target.value})}/></Field><Field label="VAT rate (%)"><input min="0" max="100" step="0.01" type="number" value={form.vat_rate} onChange={e=>setForm({...form,vat_rate:e.target.value})}/></Field></div><div className="cost-summary"><span>Estimated total including VAT</span><strong>{money(Number(form.subtotal||0)*(1+Number(form.vat_rate||0)/100))}</strong></div>{create.isError&&<Notice tone="danger">{create.error.message}</Notice>}<div className="modal__actions"><Button variant="secondary" onClick={()=>setOpen(false)}>Cancel</Button><Button type="submit" disabled={create.isPending||requests.isPending||vendors.isPending}><FilePlus size={16}/> {create.isPending?'Creating…':'Create invoice'}</Button></div></form></Modal>}</>;
+import { useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { CheckCircle2, FilePlus, Plus } from 'lucide-react';
+import { useAuth } from '../app/App';
+import { canCreateInvoice, canMarkPaid } from '../domain/policy';
+import { date, money } from '../domain/format';
+import { repo } from '../services/repository';
+import {
+  Button,
+  Empty,
+  ErrorState,
+  Field,
+  Loading,
+  Modal,
+  Notice,
+  PageHeading,
+  Panel,
+  SearchInput,
+  Status,
+  Table,
+  PaginationNote,
+} from '../components/UI';
+export function Invoices() {
+  const { user } = useAuth(),
+    qc = useQueryClient();
+  const [search, setSearch] = useState(''),
+    [open, setOpen] = useState(false);
+  const [form, setForm] = useState({
+    purchase_request_id: '',
+    vendor_id: '',
+    invoice_number: '',
+    invoice_date: new Date().toISOString().slice(0, 10),
+    due_date: '',
+    subtotal: '',
+    vat_rate: '19',
+    notes: '',
+  });
+  const invoices = useQuery({
+    queryKey: ['invoices', user.id],
+    queryFn: () => repo.invoices(user),
+  });
+  const vendors = useQuery({
+    queryKey: ['vendors', user.id],
+    queryFn: () => repo.vendors(user),
+    enabled: open,
+  });
+  const requests = useQuery({
+    queryKey: ['requests', 'invoice-form', user.id],
+    queryFn: () => repo.requests(user),
+    enabled: open,
+  });
+  const create = useMutation({
+    mutationFn: () =>
+      repo.createInvoice(user, {
+        purchase_request_id: Number(form.purchase_request_id),
+        vendor_id: Number(form.vendor_id),
+        invoice_number: form.invoice_number,
+        invoice_date: form.invoice_date,
+        due_date: form.due_date || null,
+        subtotal: Number(form.subtotal),
+        vat_rate: Number(form.vat_rate),
+        currency: 'EUR',
+        notes: form.notes,
+      }),
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['invoices'] }),
+        qc.invalidateQueries({ queryKey: ['requests'] }),
+      ]);
+      setOpen(false);
+    },
+  });
+  const pay = useMutation({
+    mutationFn: (id: number) => repo.payInvoice(user, id),
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['invoices'] }),
+        qc.invalidateQueries({ queryKey: ['requests'] }),
+      ]);
+    },
+  });
+  const rows = useMemo(
+    () =>
+      invoices.data?.data.filter((i) =>
+        `${i.invoice_number} ${i.vendor?.name ?? ''}`.toLowerCase().includes(search.toLowerCase()),
+      ) || [],
+    [invoices.data, search],
+  );
+  return (
+    <>
+      <PageHeading
+        eyebrow="FINANCE OPERATIONS"
+        title="Invoices"
+        description="Track supplier invoices, tax calculations and payment status."
+        action={
+          canCreateInvoice(user.role) ? (
+            <Button onClick={() => setOpen(true)}>
+              <Plus size={17} /> New invoice
+            </Button>
+          ) : undefined
+        }
+      />
+      <Panel title="Invoice register" subtitle="All accessible supplier invoices">
+        <div className="list-toolbar">
+          <SearchInput value={search} onChange={setSearch} placeholder="Search invoice numbers…" />
+          <span className="list-count">{rows.length} invoices</span>
+        </div>
+        {invoices.isPending ? (
+          <Loading />
+        ) : invoices.isError ? (
+          <ErrorState error={invoices.error} onRetry={() => invoices.refetch()} />
+        ) : rows.length ? (
+          <>
+            <Table head={['INVOICE', 'VENDOR', 'ISSUED', 'TOTAL', 'STATUS', 'ACTION']}>
+              {rows.map((i) => (
+                <tr key={i.id}>
+                  <td>
+                    <div className="cell-title">{i.invoice_number}</div>
+                    <span className="cell-muted">
+                      REQ-{String(i.purchase_request_id).padStart(4, '0')}
+                    </span>
+                  </td>
+                  <td>{i.vendor?.name || `Vendor #${i.vendor_id}`}</td>
+                  <td className="cell-muted">{date(i.invoice_date)}</td>
+                  <td className="weight-medium">{money(i.total, i.currency)}</td>
+                  <td>
+                    <Status value={i.status} />
+                  </td>
+                  <td>
+                    {canMarkPaid(user.role) && i.status !== 'paid' && i.status !== 'cancelled' ? (
+                      <Button
+                        variant="ghost"
+                        disabled={pay.isPending}
+                        onClick={() => {
+                          if (window.confirm(`Mark invoice ${i.invoice_number} as paid?`))
+                            pay.mutate(i.id);
+                        }}
+                      >
+                        <CheckCircle2 size={15} /> Mark paid
+                      </Button>
+                    ) : (
+                      <span className="cell-muted">—</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </Table>
+            <PaginationNote shown={rows.length} total={invoices.data?.meta?.total ?? rows.length} />
+          </>
+        ) : (
+          <Empty title="No invoices found" detail="New invoices appear here when added." />
+        )}
+        {pay.isError && <Notice tone="danger">{pay.error.message}</Notice>}
+      </Panel>
+      {open && (
+        <Modal title="Create invoice" onClose={() => setOpen(false)}>
+          <form
+            className="stack-md"
+            onSubmit={(e) => {
+              e.preventDefault();
+              create.mutate();
+            }}
+          >
+            <Field label="Invoice number" required>
+              <input
+                required
+                maxLength={100}
+                value={form.invoice_number}
+                onChange={(e) => setForm({ ...form, invoice_number: e.target.value })}
+                placeholder="INV-2026-0001"
+              />
+            </Field>
+            <div className="form-row">
+              <Field label="Purchase request" required>
+                <select
+                  required
+                  value={form.purchase_request_id}
+                  onChange={(e) => setForm({ ...form, purchase_request_id: e.target.value })}
+                >
+                  <option value="">Select request</option>
+                  {requests.data?.data
+                    .filter((r) => ['approved', 'ordered', 'invoiced'].includes(r.status))
+                    .map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.title}
+                      </option>
+                    ))}
+                </select>
+              </Field>
+              <Field
+                label="Supplier"
+                required
+                hint="When a request has an approved quote, use the matching vendor."
+              >
+                <select
+                  required
+                  value={form.vendor_id}
+                  onChange={(e) => setForm({ ...form, vendor_id: e.target.value })}
+                >
+                  <option value="">Select supplier</option>
+                  {vendors.data?.data.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+            <div className="form-row">
+              <Field label="Issued on" required>
+                <input
+                  required
+                  type="date"
+                  value={form.invoice_date}
+                  onChange={(e) => setForm({ ...form, invoice_date: e.target.value })}
+                />
+              </Field>
+              <Field label="Due date">
+                <input
+                  type="date"
+                  min={form.invoice_date}
+                  value={form.due_date}
+                  onChange={(e) => setForm({ ...form, due_date: e.target.value })}
+                />
+              </Field>
+            </div>
+            <div className="form-row">
+              <Field label="Subtotal (€)" required>
+                <input
+                  required
+                  min="0.01"
+                  step="0.01"
+                  type="number"
+                  value={form.subtotal}
+                  onChange={(e) => setForm({ ...form, subtotal: e.target.value })}
+                />
+              </Field>
+              <Field label="VAT rate (%)">
+                <input
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  type="number"
+                  value={form.vat_rate}
+                  onChange={(e) => setForm({ ...form, vat_rate: e.target.value })}
+                />
+              </Field>
+            </div>
+            <div className="cost-summary">
+              <span>Estimated total including VAT</span>
+              <strong>
+                {money(Number(form.subtotal || 0) * (1 + Number(form.vat_rate || 0) / 100))}
+              </strong>
+            </div>
+            {create.isError && <Notice tone="danger">{create.error.message}</Notice>}
+            <div className="modal__actions">
+              <Button variant="secondary" onClick={() => setOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={create.isPending || requests.isPending || vendors.isPending}
+              >
+                <FilePlus size={16} /> {create.isPending ? 'Creating…' : 'Create invoice'}
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+    </>
+  );
 }

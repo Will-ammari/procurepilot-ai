@@ -63,7 +63,7 @@ It does not claim route-level real-user LCP, page speed, cache performance, netw
 
 Route components use `React.lazy` + `Suspense` at the router boundary. The repository/API contract, forms, domain policies and UI code remain separate; feature files are not duplicated. Dynamic imports are defined **outside** React component render functions to keep component identity stable.
 
-This update is *not* a rewrite into server-side MVC. In this client, route modules orchestrate UI and data access through the repository boundary; Laravel controllers remain the backend HTTP orchestration layer.
+This update is _not_ a rewrite into server-side MVC. In this client, route modules orchestrate UI and data access through the repository boundary; Laravel controllers remain the backend HTTP orchestration layer.
 
 ## Known remaining work
 

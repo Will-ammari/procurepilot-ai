@@ -1,4 +1,4 @@
-import {defineConfig} from 'vitest/config';
+import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 
 // Unit tests only. Browser specs are owned exclusively by Playwright.

@@ -1,0 +1,350 @@
+/* Quality hardening: legibility, keyboard navigation and the public case study. */
+:root {
+  --muted: #586579;
+}
+.page-heading p,
+.panel__header p,
+.summary-grid small,
+.cell-muted,
+.field__hint,
+.table-footer,
+.detail-meta,
+.breadcrumbs,
+.user-chip small,
+.login-form-card > p,
+.app-footer,
+.kpi__foot,
+.snapshot small,
+.pipeline__note,
+.approval-row__body small,
+.state p,
+.notice,
+.demo-strip {
+  color: #56657b;
+  font-size: max(12px, 0.8125rem);
+  line-height: 1.55;
+}
+.sidebar__group-label,
+.sidebar__workspace-text small,
+.sidebar__hint p {
+  color: #b3c4d7;
+  font-size: 12px;
+}
+.sidebar__link {
+  font-size: 14px;
+}
+.sidebar__hint b {
+  font-size: 11px;
+}
+.field__label,
+.field__error,
+.status,
+.priority,
+.detail-meta,
+.table-footer,
+.filter-select,
+.subtle-link,
+.pager,
+.btn {
+  font-size: 13px;
+}
+input,
+select,
+textarea,
+.search-input input {
+  font-size: 14px;
+}
+th {
+  color: #59687d;
+  font-size: 11px;
+}
+td,
+.cell-title,
+.supplier-cell strong {
+  color: #3c4b61;
+  font-size: 13px;
+}
+.status--success {
+  color: #126344;
+}
+.status--warning {
+  color: #80500d;
+}
+.status--danger {
+  color: #922636;
+}
+.status--info {
+  color: #245b9c;
+}
+.status--neutral {
+  color: #4d5c70;
+}
+.demo-strip {
+  color: #234e80;
+}
+.demo-tools button {
+  font-size: 13px;
+  color: #20538d;
+}
+.demo-tools select {
+  font-size: 13px;
+}
+.page-heading .eyebrow,
+.eyebrow {
+  font-size: 11px;
+  color: #365d8c;
+}
+.login-foot,
+.login-form-card > p,
+.login-story > p,
+.login-trust span {
+  color: #4c6075;
+  font-size: 13px;
+}
+.login-foot a,
+.app-footer a {
+  color: #1b5d9f;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.approval-row__body p {
+  color: #4c6075;
+  font-size: 13px;
+}
+.sidebar__brandtext sup,
+.snapshot__icon {
+  font-size: 11px;
+}
+:where(a, button, input, select, textarea, [role='dialog']):focus-visible {
+  outline: 3px solid #1268c2;
+  outline-offset: 3px;
+}
+.search-input:focus-within {
+  outline: 3px solid #1268c2;
+  outline-offset: 2px;
+}
+.search-input input:focus-visible {
+  outline: 0;
+}
+.skip-link {
+  position: fixed;
+  top: -100px;
+  left: 16px;
+  padding: 12px 16px;
+  background: #fff;
+  color: #0d3c72;
+  border: 2px solid #1268c2;
+  border-radius: 8px;
+  z-index: 3000;
+  font-weight: 800;
+}
+.skip-link:focus {
+  top: 12px;
+}
+.mobile-shade {
+  border: 0;
+  padding: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+@media (max-width: 720px) {
+  .page-heading p,
+  .panel__header p,
+  .summary-grid small,
+  .cell-muted,
+  .field__hint {
+    font-size: 13px;
+  }
+  .btn {
+    white-space: normal;
+    min-height: 42px;
+  }
+}
+.engineering-page {
+  background: #f7f9fc;
+  min-height: 100vh;
+  padding: 32px 20px 80px;
+  color: #243046;
+}
+.engineering-container {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.engineering-nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 65px;
+}
+.engineering-nav a,
+.engineering-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #1a5da9;
+  font-weight: 750;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.engineering-eyebrow {
+  color: #225e9a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: 0.09em;
+  font-size: 12px;
+  font-weight: 800;
+}
+.engineering-page h1 {
+  font-size: clamp(36px, 5vw, 62px);
+  line-height: 1.12;
+  margin: 20px 0;
+  letter-spacing: -0.045em;
+}
+.engineering-page h1 span {
+  color: #2670bf;
+}
+.engineering-lead {
+  font-size: 18px;
+  line-height: 1.7;
+  max-width: 750px;
+  color: #4c5e75;
+}
+.engineering-clarification {
+  margin: 32px 0 52px;
+  padding: 18px 22px;
+  background: #eaf2fc;
+  border-left: 4px solid #2b76c3;
+  color: #244e7c;
+  line-height: 1.7;
+}
+.engineering-page h2 {
+  font-size: 25px;
+  margin-bottom: 20px;
+}
+.engineering-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+.engineering-card {
+  border: 1px solid #dae3ed;
+  border-radius: 14px;
+  padding: 26px;
+  background: #fff;
+}
+.engineering-card svg {
+  color: #2670bf;
+}
+.engineering-card h3 {
+  margin: 16px 0 10px;
+  font-size: 18px;
+}
+.engineering-card p,
+.engineering-evidence p {
+  font-size: 15px;
+  color: #4b5a70;
+  line-height: 1.7;
+}
+.engineering-evidence {
+  background: #fff;
+  border: 1px solid #dae3ed;
+  border-radius: 14px;
+  padding: 30px;
+  margin-top: 24px;
+}
+.engineering-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-top: 22px;
+}
+.engineering-foot {
+  color: #5e6b7f;
+  margin-top: 28px;
+  font-size: 13px;
+}
+@media (max-width: 700px) {
+  .engineering-grid {
+    grid-template-columns: 1fr;
+  }
+  .engineering-nav {
+    margin-bottom: 35px;
+  }
+}
+
+/* v19.1 | Verified text-contrast tokens for light surfaces.
+ * Keep these rules after app.css; avoid relying on color alone for status meaning.
+ * WCAG AA normal-text contrast target: 4.5:1 or greater.
+ */
+:root {
+  --a11y-primary-button: #195bb1;
+  --a11y-button-text: #ffffff;
+  --a11y-brand-badge-text: #205493;
+  --a11y-brand-badge-surface: #e7f0ff;
+  --a11y-secondary-ink: #4e5e74;
+  --a11y-link-ink: #1e5f9c;
+  --a11y-snapshot-ink: #355577;
+  --a11y-snapshot-surface: #eff4fb;
+  --a11y-urgent-ink: #9a3d2b;
+}
+
+/* Buttons: white text on the prior primary blue missed AA for normal-sized labels. */
+.btn--primary {
+  background-color: var(--a11y-primary-button);
+  color: var(--a11y-button-text);
+}
+.btn--primary:hover,
+.btn--primary:focus-visible {
+  background-color: #144e9a;
+  color: var(--a11y-button-text);
+}
+
+/* The login AI badge was low-contrast at its small font size. */
+.login-brand b {
+  background-color: var(--a11y-brand-badge-surface);
+  color: var(--a11y-brand-badge-text);
+}
+
+/* Content hierarchy: secondary labels should remain readable, not decorative. */
+.kpi__top > span:first-child,
+.pipeline__label,
+.pipeline__label span,
+.snapshot small,
+.kpi__foot,
+.pipeline__note,
+.priority {
+  color: var(--a11y-secondary-ink);
+  font-size: 13px;
+}
+.snapshot__icon {
+  color: var(--a11y-snapshot-ink);
+  background-color: var(--a11y-snapshot-surface);
+  font-size: 12px;
+}
+.subtle-link,
+.snapshot__action,
+.snapshot__action a {
+  color: var(--a11y-link-ink);
+}
+.priority--urgent {
+  color: var(--a11y-urgent-ink);
+}
+
+/* Text stays readable at narrow viewports; existing layouts remain unchanged. */
+@media (max-width: 560px) {
+  .kpi__top > span:first-child,
+  .pipeline__label,
+  .pipeline__label span {
+    font-size: 12px;
+  }
+}

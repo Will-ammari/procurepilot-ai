@@ -5,12 +5,13 @@ import {scanShadowedSources} from './shadowed-sources.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const app = await readFile(join(root, 'src/app/App.tsx'), 'utf8');
+const shell = await readFile(join(root, 'src/app/layout/WorkspaceShell.tsx'), 'utf8');
 const config = await readFile(join(root, 'vite.config.ts'), 'utf8');
 const testConfig = await readFile(join(root, 'vitest.config.ts'), 'utf8');
-const lazyFeatures = [...app.matchAll(/lazy\s*\(\s*\(\s*\)\s*=>\s*import\(\s*['"]\.\.\/features\//g)].length;
+const lazyFeatures = [...shell.matchAll(/lazy\s*\(\s*\(\s*\)\s*=>\s*import\(\s*['"]\.\.\/\.\.\/features\//g)].length;
 const problems = [];
-if (lazyFeatures < 5 || !app.includes('<Suspense')) {
-  problems.push(`App.tsx contains ${lazyFeatures} lazy page imports; expected at least 5 and a Suspense boundary.`);
+if (lazyFeatures < 8 || !shell.includes('<Suspense') || !app.includes('ProtectedWorkspace')) {
+  problems.push(`WorkspaceShell.tsx contains ${lazyFeatures} lazy page imports; expected 8 with Suspense and a protected app route.`);
 }
 if (!/manifest\s*:\s*true/.test(config)) {
   problems.push('vite.config.ts does not enable build.manifest.');

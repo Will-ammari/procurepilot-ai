@@ -5,7 +5,7 @@
 - `npm run test`: Vitest accidentally collected Playwright specs under `e2e/`. Different test frameworks must not share test discovery.
 - `npm run test:e2e`: Two identical assertions expected `Pending approval` while the UI renders `Pending Approval`. The UI updated correctly; execution stopped before the subsequent approvals were checked.
 - `npm run build`: Vite itself finished but `report-bundle.mjs` failed because `dist/.vite/manifest.json` did not exist.
-- The emitted `index-BsXC8eqn.js` was identical in filename and size to the previous unsplit bundle. That indicates your local `App.tsx` or Vite configuration was not fully updated from the overlay. This patch re-includes those files, and the new `check:overlay` task verifies them *before* building.
+- The emitted `index-BsXC8eqn.js` was identical in filename and size to the previous unsplit bundle. That indicates your local `App.tsx` or Vite configuration was not fully updated from the overlay. This patch re-includes those files, and the new `check:overlay` task verifies them _before_ building.
 
 ## Install (PowerShell)
 

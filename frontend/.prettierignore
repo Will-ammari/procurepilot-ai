@@ -1,0 +1,6 @@
+node_modules/
+dist/
+playwright-report/
+test-results/
+.generated-js-quarantine/
+package-lock.json

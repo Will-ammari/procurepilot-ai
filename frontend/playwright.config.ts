@@ -10,7 +10,7 @@ export default defineConfig({
   workers: process.env.CI ? 2 : undefined,
   timeout: 30_000,
   expect: { timeout: 7_000 },
-  reporter: process.env.CI ? [['line'], ['html', {open: 'never'}]] : 'list',
+  reporter: process.env.CI ? [['line'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: 'http://127.0.0.1:4173',
     trace: 'retain-on-failure',
@@ -18,8 +18,16 @@ export default defineConfig({
     video: 'retain-on-failure',
   },
   projects: [
-    {name: 'chromium-desktop', use: {...devices['Desktop Chrome']}},
-    {name: 'chromium-mobile', use: {...devices['Desktop Chrome'], viewport: {width: 390, height: 844}, isMobile: true, hasTouch: true}},
+    { name: 'chromium-desktop', use: { ...devices['Desktop Chrome'] } },
+    {
+      name: 'chromium-mobile',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 390, height: 844 },
+        isMobile: true,
+        hasTouch: true,
+      },
+    },
   ],
   webServer: {
     command: 'npm run dev -- --host 127.0.0.1 --port 4173 --strictPort',
@@ -28,6 +36,6 @@ export default defineConfig({
     // mistaken for the isolated public demo used by these tests.
     reuseExistingServer: false,
     timeout: 90_000,
-    env: {VITE_DATA_MODE: 'demo'},
+    env: { VITE_DATA_MODE: 'demo' },
   },
 });

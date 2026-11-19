@@ -34,6 +34,10 @@ jobs:
         run: npm run typecheck
       - name: Unit tests
         run: npm run test
+      - name: ESLint quality gate
+        run: npm run lint
+      - name: Prettier formatting gate
+        run: npm run format:check
       - name: Production build + bundle evidence
         run: npm run build
       - name: Install Playwright Chromium

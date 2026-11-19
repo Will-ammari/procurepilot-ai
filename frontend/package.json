@@ -18,7 +18,11 @@
     "predev": "npm run check:overlay",
     "check:shadowed": "node scripts/shadowed-sources.mjs",
     "clean:shadowed": "node scripts/shadowed-sources.mjs --quarantine",
-    "test:tooling": "node --test scripts/shadowed-sources.test.mjs"
+    "test:tooling": "node --test scripts/shadowed-sources.test.mjs scripts/contrast-tokens.test.mjs",
+    "lint": "eslint src e2e",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"e2e/**/*.ts\" \"*.{ts,mjs,json}\" \"docs/**/*.md\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"e2e/**/*.ts\" \"*.{ts,mjs,json}\" \"docs/**/*.md\"",
+    "test:a11y": "playwright test e2e/session-accessibility.spec.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -39,6 +43,14 @@
     "typescript": "~5.8.3",
     "vite": "^6.3.0",
     "vitest": "5.1.1",
-    "@playwright/test": "^1.56.0"
+    "@playwright/test": "^1.56.0",
+    "@axe-core/playwright": "^4.10.2",
+    "eslint": "^9.39.1",
+    "@typescript-eslint/parser": "^8.46.0",
+    "@typescript-eslint/eslint-plugin": "^8.46.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "globals": "^16.4.0",
+    "prettier": "^3.6.2"
   }
 }
