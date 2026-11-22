@@ -159,3 +159,8 @@ The uploaded PageSpeed desktop screenshot is archived at [`docs/assets/pagespeed
 **Implemented and verifiable in source:** backend domain workflows, tenant-aware API code, reliable-event mechanisms, tests/CI, standalone UI demo and frontend accessibility checks. **Not claimed:** live Laravel/Redis/MySQL hosting, customer production usage, real-user Web Vitals, a trained AI model, comprehensive WCAG/security audit, or production SLOs/incident response. For a portfolio these are deliberately separate from the product demonstration.
 
 MIT-licensed Laravel skeleton dependencies and third-party packages retain their respective licenses. See dependency manifests and license files.
+
+
+### v21 — Local operational visibility and security preflight
+
+A **local-only** Prometheus/Grafana pipeline exports real Laravel/Outbox/Queue gauges through an internal Docker network without a public metrics API. The API now adds security headers to final responses; Docker development ports bind to loopback. These changes are **not** a production deployment or external security certification. See [v21 runbook](docs/V21_OBSERVABILITY_SECURITY_RUNBOOK.md) and [threat model](docs/V21_SECURITY_THREAT_MODEL.md) for setup, reproducible failure drills, rollback and unimplemented production controls.

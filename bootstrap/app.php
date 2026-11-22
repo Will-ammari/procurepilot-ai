@@ -28,8 +28,17 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->api(prepend: [
             AttachRequestId::class,
         ]);
+
+        // API authentication failures must never depend on a named web login route.
+        $middleware->redirectGuestsTo(static function (Request $request): ?string {
+            return $request->is('api/*') ? null : '/login';
+        });
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Keep the API error contract independent of client Accept headers.
+        $exceptions->shouldRenderJsonWhen(static function (Request $request, Throwable $exception): bool {
+            return $request->is('api/*') || $request->expectsJson();
+        });
         $exceptions->render(function (Throwable $exception, Request $request) {
             if (! $request->is('api/*')) {
                 return null;

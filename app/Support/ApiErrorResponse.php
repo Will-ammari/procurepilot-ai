@@ -27,14 +27,8 @@ class ApiErrorResponse
             ], static fn (mixed $value): bool => $value !== null),
         ];
 
-        if (config('app.debug') && $exception instanceof Throwable) {
-            $payload['debug'] = [
-                'exception' => $exception::class,
-                'file' => $exception->getFile(),
-                'line' => $exception->getLine(),
-                'trace' => collect($exception->getTrace())->take(5)->all(),
-            ];
-        }
+        // Never serialize exception internals into API responses, even with APP_DEBUG=true.
+        // Server-side logs retain the request_id needed for diagnosis.
 
         return response()->json($payload, $status);
     }

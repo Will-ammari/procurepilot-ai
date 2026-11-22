@@ -1,5 +1,28 @@
+
+# Docker-only Laravel runtime configuration.
+# Intentionally overrides host-side SQLite/database cache defaults
+# without replacing the developer's .env file.
+# Reuse identical settings across HTTP, queue, outbox, and metrics exporter.
+
+x-laravel-runtime-env: &laravel_runtime_env
+  # Production-like local containers must not expose exception traces.
+  APP_DEBUG: "false"
+  DB_CONNECTION: mysql
+  DB_HOST: db
+  DB_PORT: "3306"
+  DB_DATABASE: procurepilot
+  DB_USERNAME: procurepilot
+  DB_PASSWORD: ${DB_PASSWORD:-secret}
+  CACHE_STORE: redis
+  QUEUE_CONNECTION: redis
+  REDIS_CLIENT: phpredis
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  REDIS_QUEUE: procurement-events
+
 services:
   app:
+    environment: *laravel_runtime_env
     build:
       context: .
       dockerfile: Dockerfile
@@ -15,6 +38,7 @@ services:
       - procurepilot
 
   queue:
+    environment: *laravel_runtime_env
     build:
       context: .
       dockerfile: Dockerfile
@@ -32,6 +56,7 @@ services:
 
   # Enable via: docker compose --profile ops up -d outbox
   outbox:
+    environment: *laravel_runtime_env
     profiles: [ops]
     build:
       context: .
@@ -52,7 +77,7 @@ services:
     container_name: procurepilot_nginx
     restart: unless-stopped
     ports:
-      - "8000:80"
+      - "127.0.0.1:8000:80"
     volumes:
       - ./:/var/www/html
       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
@@ -66,12 +91,14 @@ services:
     container_name: procurepilot_db
     restart: unless-stopped
     ports:
-      - "3308:3306"
+      - "127.0.0.1:3308:3306"
     environment:
       MYSQL_DATABASE: procurepilot
       MYSQL_USER: procurepilot
-      MYSQL_PASSWORD: secret
-      MYSQL_ROOT_PASSWORD: root
+      # Local example only; set a unique secret for non-demo use.
+      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+      # Local example only.
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
     volumes:
       - procurepilot_mysql_data:/var/lib/mysql
     networks:
@@ -82,7 +109,7 @@ services:
     container_name: procurepilot_redis
     restart: unless-stopped
     ports:
-      - "6380:6379"
+      - "127.0.0.1:6380:6379"
     networks:
       - procurepilot
 
@@ -91,8 +118,8 @@ services:
     container_name: procurepilot_mailpit
     restart: unless-stopped
     ports:
-      - "8026:8025"
-      - "1026:1025"
+      - "127.0.0.1:8026:8025"
+      - "127.0.0.1:1026:1025"
     networks:
       - procurepilot
 
@@ -103,14 +130,117 @@ services:
     container_name: procurepilot_ai_service
     restart: unless-stopped
     ports:
-      - "8001:8000"
+      - "127.0.0.1:8001:8000"
     networks:
       - procurepilot
 
+  # Opt-in local monitoring:
+  # docker compose --profile monitoring up -d --build
+  metrics-exporter:
+    profiles: [monitoring]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /var/www/html
+    command: ["sh", "/var/www/html/docker/monitoring/export-loop.sh"]
+    environment:
+      <<: *laravel_runtime_env
+      OPS_EXPORT_WINDOW_MINUTES: ${OPS_EXPORT_WINDOW_MINUTES:-5}
+      OPS_EXPORT_INTERVAL_SECONDS: ${OPS_EXPORT_INTERVAL_SECONDS:-15}
+    restart: unless-stopped
+    volumes:
+      - ./:/var/www/html:ro
+      - procurepilot_metrics:/metrics
+    depends_on:
+      - db
+      - redis
+    networks:
+      - procurepilot
+    security_opt:
+      - no-new-privileges:true
+
+  metrics-http:
+    profiles: [monitoring]
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    volumes:
+      - procurepilot_metrics:/usr/share/nginx/html:ro
+      - ./docker/monitoring/metrics-nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - monitoring_private
+    security_opt:
+      - no-new-privileges:true
+
+  prometheus:
+    profiles: [monitoring]
+    image: prom/prometheus:v2.55.1
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=7d
+    volumes:
+      - ./docker/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./docker/monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - procurepilot_prometheus:/prometheus
+    networks:
+      - monitoring_private
+    security_opt:
+      - no-new-privileges:true
+
+  grafana:
+    profiles: [monitoring]
+    image: grafana/grafana:11.3.1
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SERVER_DOMAIN: localhost
+
+    # Refuse to start if the operator forgot to
+    # configure a local password.
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - 'test -n "$$GF_SECURITY_ADMIN_PASSWORD" || { echo "Set GRAFANA_ADMIN_PASSWORD in .env" >&2; exit 1; }; exec /run.sh'
+
+    volumes:
+      - ./docker/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/monitoring/grafana/dashboards:/etc/grafana/dashboards:ro
+      - procurepilot_grafana:/var/lib/grafana
+
+    # Grafana needs a non-internal network for Docker host
+    # port publishing.
+    # Prometheus and the metrics HTTP endpoint remain
+    # on monitoring_private only.
+    networks:
+      - monitoring_private
+      - monitoring_access
+    security_opt:
+      - no-new-privileges:true
+
 networks:
+  monitoring_private:
+    internal: true
+
+  monitoring_access:
+    driver: bridge
+
   procurepilot:
     driver: bridge
 
 volumes:
   procurepilot_mysql_data:
+    driver: local
+
+  procurepilot_metrics:
+    driver: local
+
+  procurepilot_prometheus:
+    driver: local
+
+  procurepilot_grafana:
     driver: local

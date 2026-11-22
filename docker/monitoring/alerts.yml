@@ -1,0 +1,38 @@
+groups:
+  - name: procurepilot-local
+    rules:
+      - alert: ProcurePilotMetricsUnavailable
+        expr: absent(procurepilot_export_timestamp_seconds) or (time() - procurepilot_export_timestamp_seconds > 120)
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Metrics exporter is unavailable or stale"
+      - alert: ProcurePilotOutboxBacklog
+        expr: sum(procurepilot_outbox_messages{status=~"pending|processing"}) > 100
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Outbox backlog over 100 events"
+      - alert: ProcurePilotOutboxOldestEvent
+        expr: procurepilot_oldest_undelivered_age_seconds > 300
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Oldest undelivered event exceeds five minutes"
+      - alert: ProcurePilotTerminalFailure
+        expr: procurepilot_outbox_messages{status="failed"} > 0 or procurepilot_failed_jobs > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Outbox terminal failure or queue failed job present"
+      - alert: ProcurePilotApiErrors
+        expr: procurepilot_http_requests_window{status_class="5xx"} >= 5
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "At least five API 5xx within the configured window"

@@ -13,6 +13,7 @@ use App\Policies\VendorPolicy;
 use App\Services\Monitoring\ApiRequestTelemetry;
 use App\Services\Outbox\OutboxTransport;
 use App\Services\Outbox\QueueOutboxTransport;
+use App\Services\Security\ApiResponseSecurityHeaders;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Foundation\Http\Events\RequestHandled;
 use Illuminate\Http\Request;
@@ -32,9 +33,10 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Event::listen(RequestHandled::class, ApiRequestTelemetry::class);
+        Event::listen(RequestHandled::class, ApiResponseSecurityHeaders::class);
 
         RateLimiter::for('login', static function (Request $request): array {
-            $identity = Str::lower(trim((string) $request->input('email', '')));
+            $identity = hash('sha256', Str::lower(trim((string) $request->input('email', ''))));
 
             return [
                 Limit::perMinute(5)->by($identity.'|'.$request->ip()),

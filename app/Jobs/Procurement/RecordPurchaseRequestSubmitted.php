@@ -32,6 +32,7 @@ class RecordPurchaseRequestSubmitted implements ShouldQueue
         public readonly int $purchaseRequestId,
         public readonly int $submittedByUserId,
         public readonly ?string $submittedAt = null,
+        public readonly ?string $correlationId = null,
     ) {
         $this->onQueue('procurement-events');
     }
@@ -59,9 +60,20 @@ class RecordPurchaseRequestSubmitted implements ShouldQueue
                 'submitted_by_user_id' => $this->submittedByUserId,
                 'submitted_at' => $this->submittedAt ?? now()->toISOString(),
                 'processed_by' => self::class,
+                'correlation_id' => $this->correlationId,
             ],
             idempotencyKey: 'purchase_request.submitted:'.$this->purchaseRequestId
         );
+
+        try {
+            Log::info('outbox.consumer.completed', [
+                'event' => ActivityLog::EVENT_PURCHASE_REQUEST_SUBMITTED,
+                'correlation_id' => $this->correlationId,
+                'outcome' => 'committed_or_idempotent',
+            ]);
+        } catch (Throwable) {
+            // Logging failure cannot retroactively fail a committed audit event.
+        }
     }
 
     public function failed(Throwable $exception): void
@@ -70,6 +82,7 @@ class RecordPurchaseRequestSubmitted implements ShouldQueue
             'purchase_request_id' => $this->purchaseRequestId,
             'submitted_by_user_id' => $this->submittedByUserId,
             'exception' => $exception::class,
+            'correlation_id' => $this->correlationId,
         ]);
     }
 }

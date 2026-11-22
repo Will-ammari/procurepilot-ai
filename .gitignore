@@ -28,3 +28,8 @@ fastapi-service/.venv/
 fastapi-service/**/__pycache__/
 fastapi-service/.pytest_cache/
 *.pyc
+
+# Local observability credentials and exported metrics
+*.prom
+monitoring.local.env
+/docker/monitoring/secrets/

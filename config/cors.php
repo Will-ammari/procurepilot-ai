@@ -12,8 +12,8 @@ return [
         explode(',', (string) env('FRONTEND_ALLOWED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173'))
     ))),
     'allowed_origins_patterns' => [],
-    'allowed_headers' => ['Accept', 'Authorization', 'Content-Type', 'X-Requested-With', 'X-Request-Id'],
-    'exposed_headers' => ['X-Request-Id'],
+    'allowed_headers' => ['Accept', 'Authorization', 'Content-Type', 'X-Requested-With', 'X-Request-Id', 'traceparent'],
+    'exposed_headers' => ['X-Request-Id', 'traceparent'],
     'max_age' => 3600,
     'supports_credentials' => false,
 ];

@@ -74,6 +74,7 @@ class OutboxPublisher
                     $this->metrics->count($terminal ? 'outbox_failed' : 'outbox_retried');
                     Log::warning('Outbox delivery attempt failed.', [
                         'outbox_id' => $message->id,
+                        'correlation_id' => $message->correlation_id,
                         'event_type' => $message->event_type,
                         'attempt' => $message->attempts,
                         'terminal' => $terminal,

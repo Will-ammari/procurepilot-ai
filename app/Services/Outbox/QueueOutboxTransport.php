@@ -5,6 +5,7 @@ namespace App\Services\Outbox;
 use App\Jobs\Procurement\RecordPurchaseRequestSubmitted;
 use App\Models\OutboxMessage;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Str;
 use UnexpectedValueException;
 
 class QueueOutboxTransport implements OutboxTransport
@@ -31,6 +32,9 @@ class QueueOutboxTransport implements OutboxTransport
             $payload['purchase_request_id'],
             $payload['submitted_by_user_id'],
             $payload['submitted_at'],
+            is_string($message->correlation_id) && Str::isUuid($message->correlation_id)
+                ? $message->correlation_id
+                : null,
         ));
     }
 }
