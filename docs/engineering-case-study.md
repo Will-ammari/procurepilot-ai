@@ -1,6 +1,6 @@
 # Engineering case study — ProcurePilot AI
 
-**Source-backed technical walkthrough · November 19, 2026 · portfolio implementation**
+**Source-backed technical walkthrough · initial review November 19, 2026 · v21 operational update November 22, 2026 · portfolio implementation**
 
 [Live synthetic demo](https://procurepilot-ai-nine.vercel.app/) · [Source repository](https://github.com/Will-ammari/procurepilot-ai) · [README](../README.md) · [API spec](openapi.yaml)
 
@@ -133,11 +133,27 @@ The FastAPI **mock provider uses heuristics**, not a trained production model. C
 
 **Evidence:** [`QuoteAnalysisReliabilityTest.php`](../tests/Feature/Procurement/QuoteAnalysisReliabilityTest.php) and [`QuoteAnalysisApiTest.php`](../tests/Feature/Api/V1/QuoteAnalysisApiTest.php).
 
-## 7. Operations and observable evidence
+## 7. Decision: make local operations observable without exposing business data
 
-The repository includes [`AttachRequestId`](../app/Http/Middleware/AttachRequestId.php) for request correlation; [`HealthCheckService`](../app/Services/Monitoring/HealthCheckService.php) for dependency checks; [`OperationalMetrics`](../app/Services/Monitoring/OperationalMetrics.php) with bounded cache-backed counters/histograms; [`ApiRequestTelemetry`](../app/Services/Monitoring/ApiRequestTelemetry.php); and command-line outbox inspection/retry/prune utilities. The [`PHASE3_RUNBOOK.md`](PHASE3_RUNBOOK.md) describes on-call style failure triage and repair steps.
+The [v21 operations implementation](V21_OBSERVABILITY_SECURITY_RUNBOOK.md) builds on request IDs and W3C trace context, bounded Redis-backed HTTP/event windows, outbox and failed-job snapshots, and structured logs. A scheduled exporter writes a Prometheus textfile into a Docker volume; an **internal-only** Nginx endpoint serves it to Prometheus, which supplies the provisioned Grafana dashboard. The metric dimensions are allow-listed and do not include tenant IDs, users, supplier names or arbitrary request paths.
 
-These are **implemented operational building blocks**, not evidence of a hosted observability stack, tracing service, production incident history or measured SLO compliance. Those remain future work.
+This topology is intentionally **local-first**. Prometheus collects the measurements and evaluates five rules for exporter freshness, outbox backlog, oldest undelivered event, terminal job failure and HTTP 5xx. Grafana displays panels and rule evaluation. No Alertmanager receiver is configured, so **delivering external notifications remains unimplemented**.
+
+### Local evidence from November 22, 2026
+
+| Check | Recorded result | What it does not prove |
+| --- | --- | --- |
+| Laravel PHP tests | **146 passed, 2 skipped, 559 assertions** | The default local suite skipped two opt-in MySQL concurrency cases; the separate MySQL CI workflow targets those scenarios |
+| Static analysis and code style | PHPStan **0 errors**; Laravel Pint **192 files passing** | Absence of runtime defects or complete security coverage |
+| Authentication boundary | An unauthenticated `/api/v1/purchase-requests` request returned **JSON 401** with `X-Request-Id` and no debug trace | All routes, tokens and authorization scenarios are secure by default |
+| Metrics pipeline | Generated 401 requests changed the Grafana HTTP 4xx rolling-window gauge; `up{job="procurepilot"}=1` | Exact all-time request counts, p99 latency or production traffic |
+| Failure/recovery drill | Stopped `metrics-http`; saw `up` transition **1 -> 0 -> 1**, plus `ProcurePilotMetricsUnavailable` **Pending -> Firing** in Grafana | Notification delivery, automatic remediation, production SLOs or incident history |
+| Local runtime preflight | `APP_DEBUG` disabled and a stable `APP_KEY` detected; loopback-only published Docker ports | Production TLS, backups, IAM, secret rotation or external penetration testing |
+| GitHub Actions | Laravel CI and isolated MySQL concurrency/outbox workflow passed on commit [`84a864f`](https://github.com/Will-ammari/procurepilot-ai/commit/84a864f) | A deployed public backend or an exhaustive test matrix |
+
+The metrics exporter freshness rule uses an absent/stale timestamp expression with `for: 2m`, not simply `up == 0`. Prometheus window gauges should not be interpreted with `rate()` as monotonic counters. The observed drill tests **detection and alert state transitions**, not any external pager or on-call response.
+
+**Trade-off:** this adds a bounded monitoring workload and local config files, but keeps instrumentation low-cardinality and off the public API surface. It does not provide a distributed tracing backend, long-term retained metrics, externally reachable dashboards or a production incident management workflow.
 
 ## 8. Frontend and test strategy
 
@@ -158,6 +174,7 @@ The PageSpeed landing-page audit reported 100 Performance/Accessibility/Best Pra
 | Deterministic quote evaluation/fallback | Reproducible results, safe degradation | Not a measured ML model; less contextual intelligence |
 | Browser-local public demo | Free review without storing visitor data on a backend | Does not prove live API integration or production operations |
 | Lazy routes and E2E quality gates | Smaller landing JS and regression evidence | Additional build/test complexity; field performance not measured |
+| Local Prometheus and Grafana | Reproducible HTTP/outbox/queue metrics and alert-state evaluation | No external notification receiver, SLO proof or long-term hosted telemetry |
 
 ## 10. Reproduce the claims
 
@@ -186,7 +203,7 @@ The MySQL concurrency suite must be run **only against an isolated disposable My
 
 - Hosted public Laravel API connected to Vercel, real customer auth and payment flows.
 - Comprehensive penetration testing, accessibility compliance audit or independent threat model.
-- Production error budgets/SLOs, traces, dashboards, restoration drills and incident evidence.
+- Production error budgets/SLOs, end-to-end distributed traces, production dashboards, backup-restore validation and real incident evidence. Local dashboards and a controlled metrics-endpoint recovery drill **have** been exercised.
 - Real-user Web Vitals and reproducible before/after Lighthouse runs over equivalent conditions.
 - Validated AI model quality beyond deterministic/mock logic.
 

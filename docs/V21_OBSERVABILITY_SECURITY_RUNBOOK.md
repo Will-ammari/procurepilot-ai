@@ -2,19 +2,21 @@
 
 **Scope:** extends existing Laravel 12 code, does not replace procurement orchestrators, migrations, React demo, API contracts or .env files. This is a reproducible **local/staging** operations demonstration, **not** evidence that a production backend is deployed, audited or secure.
 
-## 1. Apply the rootless ZIP on Windows
+## 1. Clone and prepare the checked-in project (Windows / PowerShell)
 
-The package has paths such as `app/`, `docker/`, `.github/`, `tests/`, `docs/` **at ZIP root**. It contains only changed/new project files, NOT an additional project folder, and has no `.env`, `.git`, vendor, node_modules, database or customer data. Back up the repository first:
+v21 is already committed in this repository; **no overlay ZIP is needed**. For a new checkout:
 
 ```powershell
-cd D:\procurepilot-ai
-git status --short
-git switch -c feature/v21-observability-security
-# Back up tracked changes / save DB and attachments before any real deployment.
-Expand-Archive -Path "$env:USERPROFILE\Downloads\procurepilot-v21-observability-security-overlay.zip" -DestinationPath . -Force
+git clone https://github.com/Will-ammari/procurepilot-ai.git
+cd procurepilot-ai
+composer install
+# Only on a fresh checkout with no .env file:
+if (-not (Test-Path .env)) { Copy-Item .env.docker.example .env }
 ```
 
-**Do not delete the project folder or replace your `.env`.** Inspect changed files via `git diff --stat` and `git diff --check`. This archive is based on the uploaded code snapshot from 22 Nov 2026; if your checkout differs, review diffs before overwriting files.
+Before launching Docker, edit `.env` locally: replace the example MySQL and Grafana passwords with unique development secrets. If this is a **fresh, never-used environment** and `APP_KEY` is empty, run `php artisan key:generate` **once**. Do **not** overwrite an existing `.env`, rotate an established `APP_KEY`, or assume changing MySQL environment variables updates a previously initialized database account. Preserve existing Docker volumes and data. The `.env` file must remain excluded from Git.
+
+Windows Docker Desktop must have drive access, and the bind-mounted project needs Composer dependencies (`vendor/`).
 
 ## 2. Configure local secrets (NOT in Git)
 
@@ -29,40 +31,41 @@ GRAFANA_ADMIN_PASSWORD=choose-your-own-long-random-password
 MYSQL_ROOT_PASSWORD=choose-another-long-random-password
 ```
 
-**For a new Docker database only:** `.env.docker.example` documents the required DB/Redis/queue settings. Copying it into a *new* `.env` requires `php artisan key:generate`; never overwrite a current `.env` or rotate existing database credentials without a coordinated migration. Compose falls back to historical `secret` / `root` passwords when variables are missing to preserve the existing **local-only** developer workflow; these fallbacks are **not production credentials**. Changing environment variables alone does **not** rotate users/passwords stored in an already-initialized MySQL volume.
+**For a new Docker database only:** `.env.docker.example` documents the required DB/Redis/queue settings. Generate an `APP_KEY` once for the new environment, before any encrypted data; never replace an existing key or rotate existing database credentials without a coordinated migration. Compose falls back to historical `secret` / `root` passwords when variables are missing to preserve the existing **local-only** developer workflow; these fallbacks are **not production credentials**. Changing environment variables alone does **not** rotate users/passwords stored in an already-initialized MySQL volume.
 
-**Windows Docker Desktop note:** mounts must have access to your working drive. PHP container must have `vendor/` installed. For a new checkout, install deps using the existing runbook; compose builds image but does not run `composer install` automatically.
 
-## 3. Local start + safety gates
+## 3. Local start, verification and monitoring access
+
+Start on a **development** database, not a production or customer database:
 
 ```powershell
-# Existing tests first
-composer install
 composer lint
 composer analyse
 php artisan test
 php artisan test --filter=OperationalExportAndSecurityTest
 
-docker compose config --quiet
-docker compose up -d --build app nginx db redis queue
-docker compose exec app php artisan config:clear
-# If outbox publisher has previously been enabled, keep it running:
-docker compose --profile ops up -d outbox
-# First run will require GRAFANA_ADMIN_PASSWORD in your local .env
-docker compose --profile monitoring up -d --build metrics-exporter metrics-http prometheus grafana
-
-docker compose --profile monitoring ps
+docker compose --profile ops --profile monitoring config --quiet
+docker compose --profile ops --profile monitoring up -d --build
+# Existing schema only: non-destructive migrations; seed ONLY on an intentionally disposable demo DB.
+docker compose exec -T app php artisan migrate
+# If an existing app container was recreated, recreate Nginx too if upstream routing returns 502.
+docker compose --profile ops --profile monitoring ps
 docker compose --profile monitoring logs --tail=60 metrics-exporter
-# Manual single-shot exporter verification
-docker compose --profile monitoring exec metrics-exporter php artisan ops:metrics:export --output=/metrics/procurepilot.prom --minutes=5
-# Public API should not expose metrics
-curl.exe -i http://localhost:8000/api/v1/health
-curl.exe -i http://localhost:8000/internal/metrics  # expected 404
+# Single-shot textfile export check:
+docker compose --profile monitoring exec -T metrics-exporter php artisan ops:metrics:export --output=/metrics/procurepilot.prom --minutes=5
+# The protected endpoint should return JSON 401 without a token.
+curl.exe -i http://127.0.0.1:8000/api/v1/purchase-requests
+# Public API should NOT expose the metrics endpoint.
+curl.exe -i http://127.0.0.1:8000/internal/metrics
+# Host and container application configuration preflight:
+docker compose exec -T app php artisan ops:security:audit
 ```
 
-Open **http://localhost:3000** and sign in with your configured Grafana username/password. Open **Dashboards > ProcurePilot > ProcurePilot | Local Operations**. Dashboard is provisioned from versioned JSON. Prometheus and metrics HTTP endpoints are only on an **internal Docker network** and have no published ports; Grafana is bound to `127.0.0.1:3000`. Do not expose it through public reverse proxies or tunnels. If a password is missing, the Grafana container intentionally refuses to start.
+The expected protected-API response is **401** with a JSON `unauthenticated` error, request ID and **no** stack trace. `internal/metrics` is not a public API route (expected 404). `APP_DEBUG=false` and a valid stable `APP_KEY` are required in the Docker runtime. `https_app_url` may remain `REVIEW` on local HTTP; production exposure would require real HTTPS/proxy and secret-management controls.
 
-If the exporter fails, the previous `.prom` textfile becomes **stale**. The `ProcurePilotMetricsUnavailable` rule alerts after age threshold; snapshot failures never masquerade as zero. Counts represent **rolling-window gauges**, NOT monotonic Prometheus counters, so **do not use `rate()`** on `procurepilot_*_window` series. Metrics are best-effort, cache-backed and require **shared Redis cache across API + exporter** in Docker. With `CACHE_STORE=array`, process-local counters will not aggregate; in that case only outbox/queue DB metrics remain meaningful.
+Open **http://127.0.0.1:3000** and sign in with the local Grafana credentials. The provisioned dashboard appears under **Dashboards > ProcurePilot**. The metrics HTTP endpoint and Prometheus do not publish host ports; Grafana binds to `127.0.0.1:3000`. All other published development ports in the reviewed Compose configuration are also loopback-only. Never expose the local stack through a public tunnel or reverse proxy without an independent security review.
+
+For Prometheus Explore queries use `up{job="procurepilot"}` and `procurepilot_http_requests_window{status_class="4xx"}`. The exporter snapshot uses Redis-backed rolling windows; these series are **gauges, not lifetime Prometheus counters**. Do **not** use `rate()` on `procurepilot_*_window`. `CACHE_STORE=array` makes per-process HTTP counters invisible to an exporter in a separate container. A stale `.prom` file is diagnosed by `procurepilot_export_timestamp_seconds`; snapshots must not silently present failed dependencies as zero.
 
 ## 4. Metrics, signal boundaries and costs
 
@@ -77,15 +80,27 @@ At 15-second export intervals the exporter performs a bounded number of cache re
 
 `X-Request-Id` and W3C `traceparent` already propagate through Laravel and the optional FastAPI boundary; correlation **is not full distributed tracing**. Structured JSON logs are opt-in via `LOG_CHANNEL=ops_json` (and `LOG_LEVEL=info`), emitted to stderr for `docker compose logs`. Avoid logging request bodies, authentication secrets and quote payloads. Review logs for sensitive data before sharing them.
 
-## 5. Reproducible failure drill (synthetic development data only)
+## 5. Repeatable failure detection and recovery (local only)
 
-1. Create a **synthetic** tenant/request and submit once with the API in local Docker; record the returned Request ID. Confirm outbox/queue consumers run (`docker compose --profile ops ps`).
-2. Stop **only** the `outbox` publisher (`docker compose --profile ops stop outbox`), submit one additional synthetic request, wait over 5 minutes (or use a shorter **temporary local-only** alert threshold), and inspect `procurepilot_oldest_undelivered_age_seconds` in Grafana. The OutboxOldestEvent alert should become pending/firing based on `for:` time.
-3. Restart publisher `docker compose --profile ops start outbox`; verify pending count/age decline, verify only one matching idempotent activity log exists, and inspect `queue` and `outbox` logs for failures.
-4. For database outage in a disposable environment: stop db, confirm metrics snapshot timestamp becomes stale, then start db, export again, and verify recovery. **Never stop a production DB just to demonstrate monitoring.**
-5. Write down: fault, time detected, customer-visible symptoms (if any), recovery action, verification evidence, and the metric/alert screenshot. No fabricated incident history.
+**Verified on November 22, 2026:** a controlled `metrics-http` stop caused Prometheus `up{job="procurepilot"}` to change **1 -> 0**. The `ProcurePilotMetricsUnavailable` rule reached **Pending** and **Firing**, and `up` recovered to **1** after restarting the metrics endpoint. These observations came from local Docker/Prometheus/Grafana; they are not a production incident, a notification-delivery test or a measured detection-time SLO.
 
-Alerts reside in Prometheus rules. **There is no external notification receiver or on-call integration** in this overlay; Grafana panels and Prometheus rules are local only. Wire a protected Alertmanager/email/chat receiver only after an organization-approved incident process and secret storage exist.
+The exact rule is `absent(procurepilot_export_timestamp_seconds) or (time() - procurepilot_export_timestamp_seconds > 120)`, with `for: 2m`. It is **not** equivalent to an alert with `up == 0`; the target can be down before the rule has stayed true long enough to fire. Evaluation interval and scrape interval are 15 seconds by default.
+
+```powershell
+# Inspect baseline in Grafana Explore: up{job="procurepilot"} == 1
+# Local fault injection: this interrupts ONLY the metrics HTTP serving endpoint.
+docker compose --profile monitoring stop metrics-http
+# Inspect in Grafana Explore: up{job="procurepilot"}
+# Inspect alert evaluation: ALERTS{alertname="ProcurePilotMetricsUnavailable"}
+# Leave the outage long enough for the alert expression + for: 2m.
+# Restore, even if the alert never fires:
+docker compose --profile monitoring start metrics-http
+# Re-run up{job="procurepilot"}; expect 1 after the next successful scrape.
+```
+
+For a **separate synthetic-data-only outbox exercise**, the [outbox operations runbook](PHASE3_RUNBOOK.md) explains publisher pauses, backlog, retries and idempotent audit verification. Do not stop databases, queue workers or mutate real business records merely to demonstrate alerting. Capture the injected fault, expected vs observed signal, alert lifecycle, recovery action and evidence without inventing customer impact.
+
+Five version-controlled Prometheus rules are in [`docker/monitoring/alerts.yml`](../docker/monitoring/alerts.yml): exporter unavailable/stale, outbox backlog, oldest undelivered event, terminal failures and API 5xx. They are **Prometheus-managed**, not Grafana-managed. **No Alertmanager target or external notification receiver is configured** in [`prometheus.yml`](../docker/monitoring/prometheus.yml). Seeing Pending/Firing in Grafana does **not** prove an email, Slack message or pager notification was delivered.
 
 ## 6. Security guardrails
 
@@ -100,13 +115,13 @@ See [V21 security threat model](V21_SECURITY_THREAT_MODEL.md) for threats, resid
 
 ## 7. Rollback
 
-Check changes with `git status --short`. If you have **not committed** the patch, use version control to restore only **files from this overlay**, preserving any unrelated changes; do not delete databases, migrate:fresh or `docker compose down -v`. To stop new monitoring without touching the app or its data:
+Check changes with `git status --short`. If you have local uncommitted documentation or configuration changes, review `git diff` and revert only the intended paths, preserving unrelated changes; do not delete databases, migrate:fresh or `docker compose down -v`. To stop new monitoring without touching the app or its data:
 
 ```powershell
 docker compose --profile monitoring stop metrics-exporter metrics-http prometheus grafana
 ```
 
-If necessary, stop or revert only code/config introduced by this overlay. Existing Outbox data must remain intact. There are **no new DB migrations** in this patch. Keep the old `ops` outbox publisher running when needed for the existing async audit workflow. For rollback from a deployed service, restore versioned config with a planned rollback, test API and job delivery before declaring completion.
+If necessary, revert only the specific v21 code/config changes through version control after reviewing their impact. Existing Outbox data must remain intact. The v21 observability/security change did not add DB migrations. Keep the old `ops` outbox publisher running when needed for the existing async audit workflow. For rollback from a deployed service, restore versioned config with a planned rollback, test API and job delivery before declaring completion.
 
 ## 8. Full verification & limitations
 
@@ -131,4 +146,4 @@ git diff --check
 git status --short
 ```
 
-Container dependencies and the original test suite must be validated locally/CI after overlay; source-lint alone does not prove production readiness. This patch does **not** change public Vercel frontend behavior. Adding a monitoring UI to React would be an unnecessary new trust boundary.
+Re-run relevant checks after a checkout, configuration change or dependency update; source-lint alone does not prove production readiness. v21 does **not** change public Vercel frontend behavior. Adding a monitoring UI to React would be an unnecessary new trust boundary.

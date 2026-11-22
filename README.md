@@ -1,6 +1,6 @@
 # ProcurePilot AI
 
-**Procurement workflows with explicit authorization, reliable event delivery, and testable business rules.**
+**A production-style Laravel 12 backend case study in tenant isolation, concurrency-safe approvals, transactional outbox delivery, and local observability.**
 
 [![Laravel CI](https://github.com/Will-ammari/procurepilot-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/Will-ammari/procurepilot-ai/actions/workflows/ci.yml)
 [![MySQL Concurrency & Outbox Reliability](https://github.com/Will-ammari/procurepilot-ai/actions/workflows/mysql-approval-concurrency.yml/badge.svg)](https://github.com/Will-ammari/procurepilot-ai/actions/workflows/mysql-approval-concurrency.yml)
@@ -9,6 +9,19 @@
 **[Try the interactive demo](https://procurepilot-ai-nine.vercel.app/)** · **[Engineering case study](docs/engineering-case-study.md)** · **[Lighthouse report & methodology](docs/performance-lighthouse.md)** · **[API specification](docs/openapi.yaml)**
 
 > **Deployment boundary:** the public Vercel site is a **React/TypeScript simulated demo** with synthetic browser-local data. Laravel, MySQL, Redis, the queue worker, and FastAPI are implemented in this repository and covered by separate tests, **but are not hosted behind the public demo**. The word “AI” in the name does not imply that the public demo calls a live AI model.
+
+## Backend engineering evidence (November 22, 2026)
+
+| Signal | Evidence | Scope |
+| --- | --- | --- |
+| Automated backend tests | **146 passed, 2 skipped, 559 assertions** in local PHPUnit | Two opt-in MySQL concurrency tests are excluded from the default local suite |
+| Static quality | **Laravel Pint: 192 PHP files passing; PHPStan: 0 errors** | Local checks on the v21 commit |
+| CI | [Laravel CI](https://github.com/Will-ammari/procurepilot-ai/actions/workflows/ci.yml) and [MySQL Concurrency & Outbox Reliability](https://github.com/Will-ammari/procurepilot-ai/actions/workflows/mysql-approval-concurrency.yml) passed for [`84a864f`](https://github.com/Will-ammari/procurepilot-ai/commit/84a864f) | Workflows are reproducibility evidence, not a production uptime guarantee |
+| Real local metrics | HTTP 4xx traffic appeared in Grafana via Redis-backed Laravel telemetry and Prometheus | Rolling-window gauges, not lifetime request counters |
+| Failure drill | Local metrics endpoint stopped and recovered; Prometheus observed `up=1 -> 0 -> 1` and the metrics-unavailable alert entered **Pending** then **Firing** | Controlled local drill, not a production incident or notification-delivery test |
+| Security boundary | API returned unauthenticated JSON `401` without debug traces; application key preflight and localhost-only published Docker ports checked | Local hardening; TLS, backups, IAM and independent security review remain necessary |
+
+**Start with:** [Architecture](docs/procurepilot-architecture.md) · [Engineering decisions](docs/engineering-case-study.md) · [v21 operations runbook](docs/V21_OBSERVABILITY_SECURITY_RUNBOOK.md) · [Security threat model](docs/V21_SECURITY_THREAT_MODEL.md).
 
 ![ProcurePilot AI login preview from a user-provided PageSpeed screenshot](docs/assets/demo-login-preview.png)
 
@@ -23,7 +36,7 @@
 | Reliable events | DB-atomic outbox write, claim/lease, retry and terminal-failure handling; idempotent consumer | [`OutboxPublisher.php`](app/Services/Outbox/OutboxPublisher.php), [`OutboxReliabilityTest.php`](tests/Feature/Operations/OutboxReliabilityTest.php) |
 | Concurrency | Ordered row locks, state revalidation, separate-process MySQL collision tests | [`ApprovalWorkflowService.php`](app/Services/Procurement/ApprovalWorkflowService.php), [`MySqlApprovalConcurrencyTest.php`](tests/Feature/Procurement/MySqlApprovalConcurrencyTest.php) |
 | Frontend | Responsive React + TypeScript + Vite, role-based demo, route splitting, session restoration, keyboard/a11y checks | [`frontend/`](frontend/), [`frontend/e2e/`](frontend/e2e/) |
-| Operations | Request correlation IDs, health endpoint, bounded application metrics, outbox maintenance commands | [`app/Services/Monitoring/`](app/Services/Monitoring/), [`app/Console/Commands/`](app/Console/Commands/) |
+| Operations | Request IDs and `traceparent` correlation, health checks, bounded metrics, local Prometheus/Grafana dashboards, five alert rules, security preflight | [`docs/V21_OBSERVABILITY_SECURITY_RUNBOOK.md`](docs/V21_OBSERVABILITY_SECURITY_RUNBOOK.md), [`docker/monitoring/`](docker/monitoring/) |
 
 ## What problem does it solve?
 
@@ -44,6 +57,13 @@ flowchart TB
     Publisher --> Queue[Redis-backed queue in Docker setup]
     Queue --> Worker[Idempotent audit consumer]
     API --> Ops[Health + request IDs + bounded metrics]
+    Ops --> Redis[(Shared Redis cache)]
+    Exporter[Scheduled metrics exporter] --> Redis
+    Exporter --> MySQL
+    Exporter --> MetricsFile[(Shared metrics volume)]
+    MetricsFile --> MetricsHTTP[Internal metrics Nginx]
+    MetricsHTTP --> Prometheus[Prometheus]
+    Prometheus --> Grafana[Local Grafana dashboard]
     classDef demo fill:#e7f0fd,stroke:#5687c4,color:#16325b;
     class Demo,Sim demo;
 ```
@@ -99,14 +119,27 @@ npm audit
 
 ## Run the Laravel backend locally
 
-**Option A — Docker Compose**, with Docker installed:
+**Option A — Docker Compose (Windows PowerShell / local development):**
 
-```bash
-docker compose up -d --build
-docker compose exec app php artisan migrate --seed
+Install PHP/Composer dependencies first (`vendor/` is bind-mounted into the PHP containers). For a **new clone only**, copy `.env.docker.example` to `.env`, fill in **unique local** MySQL/Grafana credentials, and generate a Laravel `APP_KEY` exactly once. Keep existing `.env` files and keys when the database already contains data; never commit secrets. See the [v21 runbook](docs/V21_OBSERVABILITY_SECURITY_RUNBOOK.md) for the first-run checklist and caveats.
+
+```powershell
+composer install
+# On a fresh clone only, when .env does not exist:
+# Copy-Item .env.docker.example .env
+# Set unique DB_PASSWORD, MYSQL_ROOT_PASSWORD and GRAFANA_ADMIN_PASSWORD in .env.
+# Then run php artisan key:generate ONCE, before creating any encrypted data.
+
+docker compose --profile ops --profile monitoring config --quiet
+docker compose --profile ops --profile monitoring up -d --build
+# Run schema migrations; seed only on an intentionally disposable demo database.
+docker compose exec -T app php artisan migrate
+curl.exe -s -o NUL -w "%{http_code}`n" http://127.0.0.1:8000/api/v1/purchase-requests
 ```
 
-In this Compose setup the API is exposed at `http://localhost:8000` and the FastAPI service at `http://localhost:8001`. See [`docs/PHASE3_RUNBOOK.md`](docs/PHASE3_RUNBOOK.md) for outbox/worker operations and [`docs/procurepilot-architecture.md`](docs/procurepilot-architecture.md) for further architectural background.
+An unauthenticated request to the protected purchase-request endpoint should return **401**, not 500. The API binds to `127.0.0.1:8000`, FastAPI to `127.0.0.1:8001`, Mailpit UI to `127.0.0.1:8026`, and Grafana to `127.0.0.1:3000`. Prometheus and the metrics endpoint have no host-published ports. Do **not** run `docker compose down -v` on a database you want to keep.
+
+A successful local startup is not a claim that the backend is publicly hosted. Grafana alert rules are evaluated locally, but **notification delivery is not configured** (no Alertmanager receiver in this setup).
 
 **Option B — native PHP + MySQL:**
 
@@ -141,7 +174,7 @@ php artisan test
 | TypeScript / ESLint / Prettier / Vite build | Passed (user-provided PowerShell logs) | Local checks, CI status can change |
 | PageSpeed Insights on **landing/login** | **Mobile & desktop: 100 Performance, 100 Accessibility, 100 Best Practices, 91 SEO** | Single captured lab runs, not measured user sessions or dashboard performance |
 | Agentic Browsing (experimental) | **2/4** in supplied report, with missing/invalid discovery files | This update supplies `llms.txt` and a valid empty ARD manifest; re-test after deploy |
-| Laravel CI and isolated MySQL concurrency | CI workflows and tests in repository | Not proof of running public backend production service |
+| Laravel backend v21 | 146 passed / 2 skipped / 559 assertions locally; Pint 192 passing; PHPStan no errors; two CI workflows passed on `84a864f` | Local/default tests and separate MySQL CI have different test scopes; not a hosted production backend |
 
 The uploaded PageSpeed desktop screenshot is archived at [`docs/assets/pagespeed-desktop-2026-11-19.png`](docs/assets/pagespeed-desktop-2026-11-19.png). [Measurement methodology and follow-up checklist →](docs/performance-lighthouse.md).
 
@@ -149,18 +182,13 @@ The uploaded PageSpeed desktop screenshot is archived at [`docs/assets/pagespeed
 
 - **[Engineering case study](docs/engineering-case-study.md):** failures, invariants, lock ordering, outbox and idempotency, tenant boundaries, AI limitations.
 - **[Architecture overview](docs/procurepilot-architecture.md):** domain entities and backend structure.
-- **[Operational runbook](docs/PHASE3_RUNBOOK.md):** outbox/worker commands and failure handling.
+- **[Outbox runbook](docs/PHASE3_RUNBOOK.md):** queue/outbox operations. **[v21 monitoring runbook](docs/V21_OBSERVABILITY_SECURITY_RUNBOOK.md):** metrics, alerting, security and failure drill.
 - **[Performance / Lighthouse evidence](docs/performance-lighthouse.md):** mobile + desktop scores and limitations.
 - **[OpenAPI spec](docs/openapi.yaml)** and **[Postman collection](docs/postman_collection.json)**.
 - **[Frontend integration](docs/frontend-integration.md)** and **[frontend QA](frontend/docs/E2E_AND_BUNDLE_QA.md)**.
 
 ## Honest project status
 
-**Implemented and verifiable in source:** backend domain workflows, tenant-aware API code, reliable-event mechanisms, tests/CI, standalone UI demo and frontend accessibility checks. **Not claimed:** live Laravel/Redis/MySQL hosting, customer production usage, real-user Web Vitals, a trained AI model, comprehensive WCAG/security audit, or production SLOs/incident response. For a portfolio these are deliberately separate from the product demonstration.
+**Implemented and verifiable in source/local evidence:** backend domain workflows, tenant-aware API code, reliable-event mechanisms, tests/CI, a local Prometheus/Grafana failure drill, standalone UI demo and frontend accessibility checks. **Not claimed:** live Laravel/Redis/MySQL hosting, customer production usage, real-user Web Vitals, a trained AI model, comprehensive WCAG/security audit, or production SLOs/incident response. For a portfolio these are deliberately separate from the product demonstration.
 
 MIT-licensed Laravel skeleton dependencies and third-party packages retain their respective licenses. See dependency manifests and license files.
-
-
-### v21 — Local operational visibility and security preflight
-
-A **local-only** Prometheus/Grafana pipeline exports real Laravel/Outbox/Queue gauges through an internal Docker network without a public metrics API. The API now adds security headers to final responses; Docker development ports bind to loopback. These changes are **not** a production deployment or external security certification. See [v21 runbook](docs/V21_OBSERVABILITY_SECURITY_RUNBOOK.md) and [threat model](docs/V21_SECURITY_THREAT_MODEL.md) for setup, reproducible failure drills, rollback and unimplemented production controls.
